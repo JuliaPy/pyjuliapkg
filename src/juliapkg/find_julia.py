@@ -62,7 +62,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     if install and prefix is not None:
         ver, info = best_julia_version(compat)
         log(f'WARNING: About to install Julia to {prefix}.')
-        log(f'  If you use juliapkg in more than one environment, you are likely to have Julia'
+        log(f'  If you use juliapkg in more than one environment, you are likely to have Julia')
         log(f'  installed in multiple locations. It is recommended to install JuliaUp')
         log(f'  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)')
         log(f'  yourself.')
