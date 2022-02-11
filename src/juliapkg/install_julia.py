@@ -18,11 +18,15 @@ from .compat import Version
 _all_julia_versions = None
 _julia_versions_url = 'https://julialang-s3.julialang.org/bin/versions.json'
 
+def log(*args, cont=False):
+    prefix = '          ' if cont else '[juliapkg]'
+    print(prefix, *args)
+
 def all_julia_versions():
     global _all_julia_versions
     if _all_julia_versions is None:
         url = _julia_versions_url
-        print(f'Querying Julia versions from {url}')
+        log(f'Querying Julia versions from {url}')
         with urllib.request.urlopen(url) as fp:
             _all_julia_versions = json.load(fp)
     return _all_julia_versions
@@ -116,7 +120,7 @@ def install_julia(ver, prefix):
         buf = download_julia(f)
         # include the version in the prefix
         v = f['version']
-        print(f'Installing Julia {v} to {prefix}')
+        log(f'Installing Julia {v} to {prefix}')
         if os.path.exists(prefix):
             shutil.rmtree(prefix)
         if os.path.dirname(prefix):
@@ -129,7 +133,7 @@ def download_julia(f):
     url = f['url']
     sha256 = f['sha256']
     size = f['size']
-    print(f'Downloading Julia from {url}')
+    log(f'Downloading Julia from {url}')
     buf = io.BytesIO()
     freq = 5
     t = time.time() + freq
@@ -140,10 +144,10 @@ def download_julia(f):
                 break
             buf.write(data)
             if time.time() > t:
-                print(f'  downloaded {buf.tell()/(1<<20):.1f} MB of {size/(1<<20):.1f} MB')
+                log(f'  downloaded {buf.tell()/(1<<20):.1f} MB of {size/(1<<20):.1f} MB', cont=True)
                 t = time.time() + freq
-    print('  download complete')
-    print(f'Verifying download')
+    log('  download complete', cont=True)
+    log(f'Verifying download')
     buf.seek(0)
     m = hashlib.sha256()
     m.update(buf.read())

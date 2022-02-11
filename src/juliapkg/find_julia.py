@@ -3,8 +3,9 @@ import os
 import shutil
 
 from subprocess import run
-from .install_julia import best_julia_version, install_julia
+from .install_julia import best_julia_version, install_julia, log
 from .compat import Version, Compat
+from .state import STATE
 
 def julia_version(exe):
     try:
@@ -13,15 +14,6 @@ def julia_version(exe):
             return Version(words[2])
     except:
         pass
-
-def julia_depot():
-    path = os.getenv('JULIA_DEPOT_PATH')
-    if path:
-        sep = ';' if os.name == 'nt' else ':'
-        depot = path.split(sep)[0]
-    else:
-        depot = os.path.join(os.path.expanduser('~'), '.julia')
-    return depot
 
 def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     """Find a Julia executable compatible with compat.
@@ -60,11 +52,18 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         # see if julia is installed
         jl_exe = shutil.which('julia')
         jl_ver = julia_version(jl_exe)
-        if orig_compat is None or jl_ver in orig_compat:
-            return (jl_exe, jl_ver)
+        if jl_ver is not None:
+            if orig_compat is None or jl_ver in orig_compat:
+                return (jl_exe, jl_ver)
+            else:
+                log('WARNING: You have Julia installed but it is not compatible with your juliapkg dependencies.')
+                log('  It is recommended that you upgrade Julia or install JuliaUp.')
     # install into the prefix
     if install and prefix is not None:
         ver, info = best_julia_version(compat)
+        log(f'WARNING: About to install Julia to {prefix}. If you use juliapkg in more than one environment,')
+        log(f'  you are likely to have Julia installed in multiple locations. It is recommended to install')
+        log(f'  JuliaUp (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads) yourself.')
         install_julia(info, prefix)
         pr_ver = julia_version(pr_exe)
         if pr_ver is not None:
@@ -90,7 +89,7 @@ def ju_find_julia(compat=None, install=False):
         Exception(f'JuliaUp just installed Julia {ver} but cannot find it')
 
 def ju_find_julia_noinstall(compat=None):
-    judir = os.path.join(julia_depot(), 'juliaup')
+    judir = os.path.join(STATE['depot'], 'juliaup')
     metaname = os.path.join(judir, 'juliaup.json')
     if os.path.exists(metaname):
         with open(metaname) as fp:

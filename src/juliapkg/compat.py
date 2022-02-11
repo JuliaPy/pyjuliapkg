@@ -31,6 +31,9 @@ class Compat:
                     clauses.append(clause)
         return Compat(clauses)
 
+    def __bool__(self):
+        return bool(self.clauses)
+
     @classmethod
     def parse(cls, verstr):
         """Parse a Julia compat specifier from a string.
