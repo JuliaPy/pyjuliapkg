@@ -65,6 +65,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         log(f'  you are likely to have Julia installed in multiple locations. It is recommended to install')
         log(f'  JuliaUp (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads) yourself.')
         install_julia(info, prefix)
+        pr_exe = shutil.which(os.path.join(prefix, 'bin', 'julia' + ext))
         pr_ver = julia_version(pr_exe)
         if pr_ver is not None:
             if compat is None or pr_ver in compat:
