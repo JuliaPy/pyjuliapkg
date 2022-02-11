@@ -124,7 +124,7 @@ def install_julia(ver, prefix):
         if os.path.exists(prefix):
             shutil.rmtree(prefix)
         if os.path.dirname(prefix):
-            os.makedirs(os.path.dirname(prefix))
+            os.makedirs(os.path.dirname(prefix), exist_ok=True)
         installer(f, buf, prefix)
         return
     raise Exception('no installable Julia version found')
