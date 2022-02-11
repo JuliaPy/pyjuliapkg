@@ -61,9 +61,11 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     # install into the prefix
     if install and prefix is not None:
         ver, info = best_julia_version(compat)
-        log(f'WARNING: About to install Julia to {prefix}. If you use juliapkg in more than one environment,')
-        log(f'  you are likely to have Julia installed in multiple locations. It is recommended to install')
-        log(f'  JuliaUp (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads) yourself.')
+        log(f'WARNING: About to install Julia to {prefix}.')
+        log(f'  If you use juliapkg in more than one environment, you are likely to have Julia'
+        log(f'  installed in multiple locations. It is recommended to install JuliaUp')
+        log(f'  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)')
+        log(f'  yourself.')
         install_julia(info, prefix)
         pr_exe = shutil.which(os.path.join(prefix, 'bin', 'julia' + ext))
         pr_ver = julia_version(pr_exe)
