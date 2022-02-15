@@ -136,7 +136,7 @@ def deps_files():
     # ~/.pyjuliapkg.json
     fn = os.path.join(os.path.expanduser('~'), '.pyjuliapkg.json')
     ans.append(fn)
-    return list(set(fn for fn in ans if os.path.isfile(fn)))
+    return list(set(os.path.normcase(os.path.normpath(os.path.abspath(fn))) for fn in ans if os.path.isfile(fn)))
 
 def required_packages():
     # read all dependencies into a dict: name -> key -> file -> value
@@ -150,7 +150,7 @@ def required_packages():
             for (k, v) in kvs.items():
                 if k == 'path':
                     # resolve paths relative to the directory containing the file
-                    v = os.path.join(os.path.dirname(fn), v)
+                    v = os.path.normcase(os.path.normpath(os.path.join(os.path.dirname(fn), v)))
                 dep.setdefault(k, {})[fn] = v
     # merges non-unique values
     def merge_unique(dep, kfvs, k):
