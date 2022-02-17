@@ -20,7 +20,7 @@ pip install juliapkg
 
 ### Functional interface
 
-- `juliapkg.set_julia_compat(version)` declares that you require the given version of Julia.
+- `juliapkg.require_julia(version)` declares that you require the given version of Julia.
   The `version` is a Julia compat specifier, so `1.5` matches any `1.*.*` version at least
   `1.5`.
 - `juliapkg.add(pkg, uuid, dev=False, version=None, path=None, url=None, rev=None)` adds

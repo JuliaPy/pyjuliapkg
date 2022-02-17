@@ -339,7 +339,7 @@ def status():
         for (name, info) in pkgs.items():
             print(f'  {name}: {info}')
 
-def set_julia_compat(compat):
+def require_julia(compat):
     deps = load_cur_deps()
     if compat is None:
         if 'julia' in deps:
