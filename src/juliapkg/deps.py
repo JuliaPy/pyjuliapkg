@@ -130,12 +130,7 @@ def deps_files():
             fn = os.path.join(path, subdir, "juliapkg.json")
             ans.append(fn)
     # {prefix}/juliapkg.json
-    if STATE['prefix']:
-        fn = os.path.join(STATE['prefix'], 'juliapkg.json')
-        ans.append(fn)
-    # ~/.pyjuliapkg.json
-    fn = os.path.join(os.path.expanduser('~'), '.pyjuliapkg.json')
-    ans.append(fn)
+    ans.append(cur_deps_file())
     return list(set(os.path.normcase(os.path.normpath(os.path.abspath(fn))) for fn in ans if os.path.isfile(fn)))
 
 def required_packages():
@@ -283,14 +278,21 @@ def project():
     resolve()
     return STATE['project']
 
-def cur_deps_file():
-    if STATE['prefix']:
-        return os.path.join(STATE['prefix'], 'juliapkg.json')
+def cur_deps_file(target=None):
+    if target is None:
+        if STATE['prefix']:
+            return os.path.join(STATE['prefix'], 'juliapkg.json')
+        else:
+            return os.path.join(os.path.expanduser('~'), '.pyjuliapkg.json')
+    elif os.path.isdir(target):
+        return os.path.abspath(os.path.join(target, 'juliapkg.json'))
+    elif os.path.isfile(target) or (os.path.isdir(os.path.dirname(target)) and not os.path.exists(target)):
+        return os.path.abspath(target)
     else:
-        return os.path.join(os.path.expanduser('~'), '.pyjuliapkg.json')
+        raise ValueError('target must be an existing directory, or a file name in an existing directory')
 
-def load_cur_deps():
-    fn = cur_deps_file()
+def load_cur_deps(target=None):
+    fn = cur_deps_file(target=target)
     if os.path.exists(fn):
         with open(fn) as fp:
             deps = json.load(fp)
@@ -298,8 +300,8 @@ def load_cur_deps():
         deps = {}
     return deps
 
-def write_cur_deps(deps):
-    fn = cur_deps_file()
+def write_cur_deps(deps, target=None):
+    fn = cur_deps_file(target=target)
     if deps:
         with open(fn, 'w') as fp:
             json.dump(deps, fp)
@@ -307,10 +309,10 @@ def write_cur_deps(deps):
         if os.path.exists(fn):
             os.remove(fn)
 
-def status():
+def status(target=None):
     res = resolve(dry_run=True)
     print('JuliaPkg Status')
-    fn = cur_deps_file()
+    fn = cur_deps_file(target=target)
     if os.path.exists(fn):
         with open(fn) as fp:
             deps = json.load(fp)
@@ -339,8 +341,8 @@ def status():
         for (name, info) in pkgs.items():
             print(f'  {name}: {info}')
 
-def require_julia(compat):
-    deps = load_cur_deps()
+def require_julia(compat, target=None):
+    deps = load_cur_deps(target=target)
     if compat is None:
         if 'julia' in deps:
             del deps['julia']
@@ -350,13 +352,13 @@ def require_julia(compat):
         elif not isinstance(compat, Compat):
             raise TypeError
         deps['julia'] = str(compat)
-    write_cur_deps(deps)
+    write_cur_deps(deps, target=target)
     STATE['resolved'] = False
 
-def add(pkg, *args, **kwargs):
-    deps = load_cur_deps()
+def add(pkg, *args, target=None, **kwargs):
+    deps = load_cur_deps(target=target)
     _add(deps, pkg, *args, **kwargs)
-    write_cur_deps(deps)
+    write_cur_deps(deps, target=target)
     STATE['resolved'] = False
 
 def _add(deps, pkg, uuid=None, **kwargs):
@@ -372,10 +374,10 @@ def _add(deps, pkg, uuid=None, **kwargs):
         for p in pkg:
             _add(deps, p)
 
-def rm(pkg):
-    deps = load_cur_deps()
+def rm(pkg, target=None):
+    deps = load_cur_deps(target=target)
     _rm(deps, pkg)
-    write_cur_deps(deps)
+    write_cur_deps(deps, target=target)
     STATE['resolved'] = False
 
 def _rm(deps, pkg):
