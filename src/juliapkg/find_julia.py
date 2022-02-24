@@ -57,14 +57,14 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         if jl_ver is not None and (compat is None or jl_ver in compat):
             return (jl_exe, jl_ver)
         else:
-            log('WARNING: You have Julia installed but it is not compatible with your juliapkg dependencies.')
-            log('  It is recommended that you upgrade Julia or install JuliaUp.')
+            log(f'WARNING: You have Julia {jl_ver} installed but {compat} is required.')
+            log(f'  It is recommended that you upgrade Julia or install JuliaUp.')
     # install into the prefix
     if install and prefix is not None:
         if upgrade and bestcompat is None:
             bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
         ver, info = best_julia_version(bestcompat if upgrade else compat)
-        log(f'WARNING: About to install Julia to {prefix}.')
+        log(f'WARNING: About to install Julia {ver} to {prefix}.')
         log(f'  If you use juliapkg in more than one environment, you are likely to have Julia')
         log(f'  installed in multiple locations. It is recommended to install JuliaUp')
         log(f'  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)')
