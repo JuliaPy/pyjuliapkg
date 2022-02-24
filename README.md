@@ -45,7 +45,7 @@ Julia v1.*.* and the Example package v0.5.*:
     "packages": {
         "Example": {
             "uuid": "7876af07-990d-54b4-ab0e-23690620f79a",
-            "version": "0.5",
+            "version": "0.5"
         }
     }
 }
