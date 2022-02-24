@@ -28,11 +28,8 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     As a special case, upgrade=True does not apply when Julia is found in the PATH, because
     if it is already installed then the user is already managing their own Julia versions.
     """
-    # if upgrading, fix compat to the best version
-    orig_compat = compat
+    bestcompat = None
     if upgrade:
-        verstr, _ = best_julia_version(compat)
-        compat = Compat.parse('=='+verstr)
         install = True
     # first look in the prefix
     if prefix is not None:
@@ -41,26 +38,32 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         pr_ver = julia_version(pr_exe)
         if pr_ver is not None:
             if compat is None or pr_ver in compat:
-                return (pr_exe, pr_ver)
+                if upgrade and bestcompat is None:
+                    bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
+                if bestcompat is None or pr_ver in bestcompat:
+                    return (pr_exe, pr_ver)
     # see if juliaup is installed
     ju_exe = shutil.which('juliaup')
     if ju_exe:
-        ans = ju_find_julia(compat, install=install)
+        if upgrade and bestcompat is None:
+            bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
+        ans = ju_find_julia(bestcompat if upgrade else compat, install=install)
         if ans:
             return ans
     else:
         # see if julia is installed
         jl_exe = shutil.which('julia')
         jl_ver = julia_version(jl_exe)
-        if jl_ver is not None:
-            if orig_compat is None or jl_ver in orig_compat:
-                return (jl_exe, jl_ver)
-            else:
-                log('WARNING: You have Julia installed but it is not compatible with your juliapkg dependencies.')
-                log('  It is recommended that you upgrade Julia or install JuliaUp.')
+        if jl_ver is not None and (compat is None or jl_ver in compat):
+            return (jl_exe, jl_ver)
+        else:
+            log('WARNING: You have Julia installed but it is not compatible with your juliapkg dependencies.')
+            log('  It is recommended that you upgrade Julia or install JuliaUp.')
     # install into the prefix
     if install and prefix is not None:
-        ver, info = best_julia_version(compat)
+        if upgrade and bestcompat is None:
+            bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
+        ver, info = best_julia_version(bestcompat if upgrade else compat)
         log(f'WARNING: About to install Julia to {prefix}.')
         log(f'  If you use juliapkg in more than one environment, you are likely to have Julia')
         log(f'  installed in multiple locations. It is recommended to install JuliaUp')
@@ -69,12 +72,12 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         install_julia(info, prefix)
         pr_exe = shutil.which(os.path.join(prefix, 'bin', 'julia' + ext))
         pr_ver = julia_version(pr_exe)
-        if pr_ver is not None:
-            if compat is None or pr_ver in compat:
-                return (pr_exe, pr_ver)
-        assert False
+        assert pr_ver is not None
+        assert compat is None or pr_ver in compat
+        assert bestcompat is None or pr_ver in bestcompat
+        return (pr_exe, pr_ver)
     # failed
-    compatstr = '' if orig_compat is None else f' {orig_compat}'
+    compatstr = '' if compat is None else f' {compat}'
     raise Exception(f'could not find Julia{compatstr}')
 
 def ju_find_julia(compat=None, install=False):
