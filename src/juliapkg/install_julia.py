@@ -65,6 +65,8 @@ def compatible_julia_versions(compat=None):
     if libc == '' and os == 'linux':
         warnings.warn('could not determine libc version - assuming glibc')
         libc = 'gnu'
+    if libc == 'gnu' and os == 'linux' and arch == 'armv7l':
+        libc = 'gnueabihf'
     ans = {}
     for (k, v) in all_julia_versions().items():
         v = v.copy()
