@@ -29,6 +29,9 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     if it is already installed then the user is already managing their own Julia versions.
     """
     bestcompat = None
+    if STATE['offline']:
+        upgrade = False
+        install = False
     if upgrade:
         install = True
     # env var PYTHON_JULIAPKG_EXE

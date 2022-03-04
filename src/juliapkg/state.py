@@ -56,6 +56,9 @@ def reset_state():
     STATE['meta'] = os.path.join(STATE['prefix'], 'meta.json')
     STATE['install'] = os.path.join(STATE['prefix'], 'install')
 
+    # offline
+    STATE['offline'] = os.getenv('PYTHON_JULIAPKG_OFFLINE', 'no').lower() == 'yes'
+
     # resolution
     STATE['resolved'] = False
 

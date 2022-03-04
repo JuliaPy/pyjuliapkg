@@ -228,48 +228,49 @@ def resolve(force=False, dry_run=False):
     log(f'Locating Julia{"" if compat is None else " "+str(compat)}')
     exe, ver = find_julia(compat=compat, prefix=STATE['install'], install=True, upgrade=True)
     log(f'Using Julia {ver} at {exe}')
-    # set up the project
-    project = STATE['project']
-    log(f'Using Julia project at {project}')
-    os.makedirs(project, exist_ok=True)
-    # write a Project.toml specifying UUIDs and compatibility of required packages
-    with open(os.path.join(project, "Project.toml"), "wt") as fp:
-        print('[deps]', file=fp)
-        for pkg in pkgs:
-            print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
-        print(file=fp)
-        print('[compat]', file=fp)
-        for pkg in pkgs:
-            if pkg.version:
-                print(f'{pkg.name} = "{pkg.version}"', file=fp)
-        print(file=fp)
-    # install the packages
-    dev_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if pkg.dev])
-    add_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
-    script = ['import Pkg']
-    if dev_pkgs:
-        script.append(f'Pkg.develop([{dev_pkgs}])')
-    if add_pkgs:
-        script.append(f'Pkg.add([{add_pkgs}])')
-    script.append('Pkg.resolve()')
-    log(f'Installing packages:')
-    for line in script:
-        log('julia>', line, cont=True)
-    run([exe, '--project='+project, '--startup-file=no', '-e', '; '.join(script)], check=True)
-    # record that we resolved
-    save_meta({
-        "meta_version": META_VERSION,
-        "dev": STATE["dev"],
-        "version": str(ver),
-        "executable": exe,
-        "timestamp": time.time(),
-        "sys_path": sys.path,
-        "pkgs": [pkg.dict() for pkg in pkgs],
-    })
-    STATE['resolved'] = True
+    if not STATE['offline']:
+        # set up the project
+        project = STATE['project']
+        log(f'Using Julia project at {project}')
+        os.makedirs(project, exist_ok=True)
+        # write a Project.toml specifying UUIDs and compatibility of required packages
+        with open(os.path.join(project, "Project.toml"), "wt") as fp:
+            print('[deps]', file=fp)
+            for pkg in pkgs:
+                print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
+            print(file=fp)
+            print('[compat]', file=fp)
+            for pkg in pkgs:
+                if pkg.version:
+                    print(f'{pkg.name} = "{pkg.version}"', file=fp)
+            print(file=fp)
+        # install the packages
+        dev_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if pkg.dev])
+        add_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
+        script = ['import Pkg']
+        if dev_pkgs:
+            script.append(f'Pkg.develop([{dev_pkgs}])')
+        if add_pkgs:
+            script.append(f'Pkg.add([{add_pkgs}])')
+        script.append('Pkg.resolve()')
+        log(f'Installing packages:')
+        for line in script:
+            log('julia>', line, cont=True)
+        run([exe, '--project='+project, '--startup-file=no', '-e', '; '.join(script)], check=True)
+        # record that we resolved
+        save_meta({
+            "meta_version": META_VERSION,
+            "dev": STATE["dev"],
+            "version": str(ver),
+            "executable": exe,
+            "timestamp": time.time(),
+            "sys_path": sys.path,
+            "pkgs": [pkg.dict() for pkg in pkgs],
+        })
+        STATE['resolved'] = True
     STATE['executable'] = exe
     STATE['version'] = ver
-    return True
+    return STATE['resolved']
 
 def executable():
     resolve()
@@ -391,3 +392,8 @@ def _rm(deps, pkg):
     else:
         for p in pkg:
             _rm(deps, p)
+
+def offline(value=True):
+    if value is not None:
+        STATE['offline'] = value
+    return STATE['offline']

@@ -93,3 +93,11 @@ that package, then JuliaPkg will find those dependencies and install them.
 
 You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the
 dependencies of your package.
+
+### Offline mode
+
+If you set the environment variable `PYTHON_JULIAPKG_OFFLINE=yes` then JuliaPkg will
+operate in offline mode. This means it will not attempt to download Julia or any packages.
+
+Resolving will fail if Julia is not already installed. It is up to you to install any
+required Julia packages.
