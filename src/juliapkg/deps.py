@@ -267,10 +267,10 @@ def resolve(force=False, dry_run=False):
             "sys_path": sys.path,
             "pkgs": [pkg.dict() for pkg in pkgs],
         })
-        STATE['resolved'] = True
+    STATE['resolved'] = True
     STATE['executable'] = exe
     STATE['version'] = ver
-    return STATE['resolved']
+    return True
 
 def executable():
     resolve()
@@ -396,4 +396,6 @@ def _rm(deps, pkg):
 def offline(value=True):
     if value is not None:
         STATE['offline'] = value
+    if value:
+        STATE['resolved'] = False
     return STATE['offline']
