@@ -19,25 +19,42 @@ def reset_state():
 
     # Determine where to put the julia environment
     # TODO: Can we more direcly figure out the environment from which python was called? Maybe find the first PATH entry containing python?
-    vprefix = os.getenv('VIRTUAL_ENV')
-    cprefix = os.getenv('CONDA_PREFIX')
-    if cprefix and vprefix:
-        raise Exception('You are using both a virtual and conda environment, cannot figure out which to use!')
-    elif cprefix:
-        prefix = cprefix
-    elif vprefix:
-        prefix = vprefix
+    project = os.getenv('JULIA_PROJECT')
+    if project:
+        if project == '@.':
+            project = os.getcwd()
+            while True:
+                for fn in ['Project.toml', 'JuliaProject.toml']:
+                    if os.path.exists(os.path.join(project, fn)):
+                        STATE['project'] = project
+                        break
+                project2 = os.path.dirname(project)
+                if project2 == project:
+                    raise Exception('JULIA_PROJECT=@. but could not find the project directory')
+                project = project2
+        else:
+            STATE['project'] = project
     else:
-        prefix = None
-    STATE['prefix'] = prefix
-    if prefix is None:
-        STATE['project'] = os.path.join(STATE['depot'], 'environments', 'pyjuliapkg')
-    else:
-        STATE['project'] = os.path.abspath(os.path.join(prefix, 'julia_env'))
+        vprefix = os.getenv('VIRTUAL_ENV')
+        cprefix = os.getenv('CONDA_PREFIX')
+        if cprefix and vprefix:
+            raise Exception('You are using both a virtual and conda environment, cannot figure out which to use!')
+        elif cprefix:
+            prefix = cprefix
+        elif vprefix:
+            prefix = vprefix
+        else:
+            prefix = None
+        if prefix is None:
+            STATE['project'] = os.path.join(STATE['depot'], 'environments', 'pyjuliapkg')
+        else:
+            STATE['project'] = os.path.abspath(os.path.join(prefix, 'julia_env'))
 
     # meta file
-    STATE['meta'] = os.path.join(STATE['project'], 'pyjuliapkgmeta.json')
-    STATE['install'] = os.path.join(STATE['project'], 'install')
+    STATE['prefix'] = os.path.join(STATE['project'], 'pyjuliapkg')
+    STATE['deps'] = os.path.join(STATE['prefix'], 'juliapkg.json')
+    STATE['meta'] = os.path.join(STATE['prefix'], 'meta.json')
+    STATE['install'] = os.path.join(STATE['prefix'], 'install')
 
     # resolution
     STATE['resolved'] = False

@@ -26,6 +26,7 @@ def save_meta(meta):
     assert isinstance(meta, dict)
     assert meta.get('meta_version') == META_VERSION
     fn = STATE['meta']
+    os.makedirs(os.path.dirname(fn), exist_ok=True)
     with open(fn, 'w') as fp:
         json.dump(meta, fp)
 
@@ -118,6 +119,8 @@ def can_skip_resolve():
 
 def deps_files():
     ans = []
+    # the default deps file
+    ans.append(cur_deps_file())
     # look in sys.path
     for path in sys.path:
         if not path:
@@ -129,8 +132,6 @@ def deps_files():
         for subdir in os.listdir(path):
             fn = os.path.join(path, subdir, "juliapkg.json")
             ans.append(fn)
-    # {prefix}/juliapkg.json
-    ans.append(cur_deps_file())
     return list(set(os.path.normcase(os.path.normpath(os.path.abspath(fn))) for fn in ans if os.path.isfile(fn)))
 
 def required_packages():
@@ -280,10 +281,7 @@ def project():
 
 def cur_deps_file(target=None):
     if target is None:
-        if STATE['prefix']:
-            return os.path.join(STATE['prefix'], 'juliapkg.json')
-        else:
-            return os.path.join(os.path.expanduser('~'), '.pyjuliapkg.json')
+        return STATE['deps']
     elif os.path.isdir(target):
         return os.path.abspath(os.path.join(target, 'juliapkg.json'))
     elif os.path.isfile(target) or (os.path.isdir(os.path.dirname(target)) and not os.path.exists(target)):
@@ -303,6 +301,7 @@ def load_cur_deps(target=None):
 def write_cur_deps(deps, target=None):
     fn = cur_deps_file(target=target)
     if deps:
+        os.makedirs(os.path.dirname(fn), exist_ok=True)
         with open(fn, 'w') as fp:
             json.dump(deps, fp)
     else:

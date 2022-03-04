@@ -60,19 +60,6 @@ Julia v1.*.* and the Example package v0.5.*:
 
 ## Details
 
-### Adding Julia dependencies to Python packages
-
-JuliaPkg looks for `juliapkg.json` files in many locations, namely:
-- Your virtual environment or Conda environment, if you have one.
-- `~/.pyjuliapkg.json` otherwise.
-- Every directory and direct sub-directory in `sys.path`.
-
-The last point means that if you put a `juliapkg.json` file in a package, then install
-that package, then JuliaPkg will find those dependencies and install them.
-
-You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the
-dependencies of your package.
-
 ### Which Julia gets used?
 
 JuliaPkg tries the following strategies in order to find Julia on your system:
@@ -81,3 +68,28 @@ JuliaPkg tries the following strategies in order to find Julia on your system:
 - If `juliaup` is in your `PATH`, it is used to install a compatible version of Julia.
 - Otherwise, JuliaPkg downloads a compatible version of Julia and installs it into the
   Julia project.
+
+More strategies may be added in a future release.
+
+### Where are Julia packages installed?
+
+JuliaPkg installs packages into a project whose location is determined by trying the
+following strategies in order:
+- If the environment variable `JULIA_PROJECT` is set, that is used.
+- If you are in a Python virtual environment or Conda environment, then `{env}/julia_env`
+  subdirectory is used.
+- Otherwise `~/.julia/environments/pyjuliapkg` is used (respects `JULIA_DEPOT`).
+
+More strategies may be added in a future release.
+
+### Adding Julia dependencies to Python packages
+
+JuliaPkg looks for `juliapkg.json` files in many locations, namely:
+- `{project}/pyjuliapkg` where project is as above (depending on your environment).
+- Every directory and direct sub-directory in `sys.path`.
+
+The last point means that if you put a `juliapkg.json` file in a package, then install
+that package, then JuliaPkg will find those dependencies and install them.
+
+You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the
+dependencies of your package.
