@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sys
 import time
@@ -9,6 +10,8 @@ from .compat import Compat, Version
 from .state import STATE
 from .find_julia import julia_version, find_julia
 from .install_julia import log
+
+logger = logging.getLogger('juliapkg')
 
 ### META
 
@@ -83,30 +86,31 @@ def can_skip_resolve():
     # resolve if we haven't resolved before
     deps = load_meta()
     if deps is None:
+        logger.debug('no meta file')
         return False
     # resolve whenever Julia changes
-    exe = deps.get("executable")
-    if exe is None:
-        return False
-    ver = deps.get("version")
+    exe = deps["executable"]
+    ver = deps["version"]
     exever = julia_version(exe)
-    if ver is None or exever is None or ver != str(exever):
+    if exever is None or ver != str(exever):
+        logger.debug('changed version %s to %s', ver, exever)
         return False
     # resolve when going from offline to online
-    offline = deps.get('offline')
-    if offline is None or (offline and not STATE['offline']):
+    offline = deps['offline']
+    if offline and not STATE['offline']:
+        logger.debug('was offline now online')
         return False
     # resolve whenever swapping between dev/not dev
-    isdev = deps.get("dev")
-    if isdev is None or isdev != STATE["dev"]:
+    isdev = deps['dev']
+    if isdev != STATE["dev"]:
+        logger.debug('changed dev %s to %s', isdev, STATE['dev'])
         return False
     # resolve whenever anything in sys.path changes
-    timestamp = deps.get("timestamp")
-    if timestamp is None:
-        return False
+    timestamp = deps["timestamp"]
     timestamp = max(os.path.getmtime(STATE["meta"]), timestamp)
-    sys_path = deps.get("sys_path")
-    if sys_path is None or sys_path != sys.path:
+    sys_path = deps["sys_path"]
+    if sys_path != sys.path:
+        logger.debug('sys.path changed %s to %s', sys_path, sys.path)
         return False
     for path in sys.path:
         if not path:
@@ -114,10 +118,12 @@ def can_skip_resolve():
         if not os.path.exists(path):
             continue
         if os.path.getmtime(path) > timestamp:
+            logger.debug('directory changed %r', path)
             return False
         if os.path.isdir(path):
             fn = os.path.join(path, "juliapkg.json")
             if os.path.exists(fn) and os.path.getmtime(fn) > timestamp:
+                logger.debug('file changed %r', fn)
                 return False
     return deps
 
