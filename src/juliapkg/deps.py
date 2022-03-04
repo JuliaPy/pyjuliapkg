@@ -113,11 +113,12 @@ def can_skip_resolve():
         logger.debug('sys.path changed %s to %s', sys_path, sys.path)
         return False
     for path in sys.path:
-        if not path:
+        here = not path
+        if here:
             path = os.getcwd()
         if not os.path.exists(path):
             continue
-        if os.path.getmtime(path) > timestamp:
+        if (not here) and (os.path.getmtime(path) > timestamp):
             logger.debug('directory changed %r', path)
             return False
         if os.path.isdir(path):
