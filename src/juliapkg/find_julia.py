@@ -31,15 +31,15 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     bestcompat = None
     if upgrade:
         install = True
-    # env var PYTHON_JULIACALL_EXE
-    ev_exe = os.getenv('PYTHON_JULIACALL_EXE')
+    # env var PYTHON_JULIAPKG_EXE
+    ev_exe = os.getenv('PYTHON_JULIAPKG_EXE')
     if ev_exe:
         ev_ver = julia_version(ev_exe)
         if ev_ver is None:
-            raise Exception(f'PYTHON_JULIACALL_EXE={ev_exe} is not a Julia executable.')
+            raise Exception(f'PYTHON_JULIAPKG_EXE={ev_exe} is not a Julia executable.')
         else:
             if compat is not None and ev_ver not in compat:
-                log(f'WARNING: PYTHON_JULIACALL_EXE={ev_exe} is Julia {ev_ver} but {compat} is required.')
+                log(f'WARNING: PYTHON_JULIAPKG_EXE={ev_exe} is Julia {ev_ver} but {compat} is required.')
             return (ev_exe, ev_ver)
     # first look in the prefix
     if prefix is not None:

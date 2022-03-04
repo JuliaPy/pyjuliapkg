@@ -72,3 +72,12 @@ that package, then JuliaPkg will find those dependencies and install them.
 
 You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the
 dependencies of your package.
+
+### Which Julia gets used?
+
+JuliaPkg tries the following strategies in order to find Julia on your system:
+- If the environment variable `PYTHON_JULIAPKG_EXE` is set, that is used.
+- If `julia` is in your `PATH`, and is compatible, that is used.
+- If `juliaup` is in your `PATH`, it is used to install a compatible version of Julia.
+- Otherwise, JuliaPkg downloads a compatible version of Julia and installs it into the
+  Julia project.
