@@ -255,7 +255,7 @@ def resolve(force=False, dry_run=False):
     log(f'Installing packages:')
     for line in script:
         log('julia>', line, cont=True)
-    run([exe, '--project='+project, '-e', '; '.join(script)], check=True)
+    run([exe, '--project='+project, '--startup-file=no', '-e', '; '.join(script)], check=True)
     # record that we resolved
     save_meta({
         "meta_version": META_VERSION,
