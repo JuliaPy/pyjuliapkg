@@ -28,10 +28,14 @@ def reset_state():
                     if os.path.exists(os.path.join(project, fn)):
                         STATE['project'] = project
                         break
-                project2 = os.path.dirname(project)
-                if project2 == project:
-                    raise Exception('JULIA_PROJECT=@. but could not find the project directory')
-                project = project2
+                else:
+                    project2 = os.path.dirname(project)
+                    if project2 == project:
+                        # TODO: actually here we should fall back to the defaut v#.# environment, not error
+                        raise Exception('JULIA_PROJECT=@. but could not find the project directory')
+                    project = project2
+                    continue
+                break
         else:
             STATE['project'] = project
     else:
