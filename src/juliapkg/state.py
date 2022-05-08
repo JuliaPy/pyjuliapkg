@@ -19,21 +19,11 @@ def reset_state():
 
     # Determine where to put the julia environment
     # TODO: Can we more direcly figure out the environment from which python was called? Maybe find the first PATH entry containing python?
-    project = os.getenv('JULIA_PROJECT')
+    project = os.getenv('PYTHON_JULIAPKG_PROJECT')
     if project:
-        if project == '@.':
-            project = os.getcwd()
-            while True:
-                for fn in ['Project.toml', 'JuliaProject.toml']:
-                    if os.path.exists(os.path.join(project, fn)):
-                        STATE['project'] = project
-                        break
-                project2 = os.path.dirname(project)
-                if project2 == project:
-                    raise Exception('JULIA_PROJECT=@. but could not find the project directory')
-                project = project2
-        else:
-            STATE['project'] = project
+        if not os.path.isabs(project):
+            raise Exception(f'PYTHON_JULIAPKG_PROJECT must be an absolute path')
+        STATE['project'] = project
     else:
         vprefix = os.getenv('VIRTUAL_ENV')
         cprefix = os.getenv('CONDA_PREFIX')

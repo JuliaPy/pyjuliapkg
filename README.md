@@ -75,7 +75,7 @@ More strategies may be added in a future release.
 
 JuliaPkg installs packages into a project whose location is determined by trying the
 following strategies in order:
-- If the environment variable `JULIA_PROJECT` is set, that is used.
+- If the environment variable `PYTHON_JULIAPKG_PROJECT` is set, that is used.
 - If you are in a Python virtual environment or Conda environment, then `{env}/julia_env`
   subdirectory is used.
 - Otherwise `~/.julia/environments/pyjuliapkg` is used (respects `JULIA_DEPOT`).
