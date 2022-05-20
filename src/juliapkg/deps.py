@@ -3,6 +3,12 @@ import logging
 import os
 import sys
 import time
+# https://github.com/hukkin/tomli#building-a-tomlitomllib-compatibility-layer
+try:
+        import tomllib
+except ModuleNotFoundError:
+        import tomli as tomllib
+import tomli_w
 
 from subprocess import run
 
@@ -243,17 +249,57 @@ def resolve(force=False, dry_run=False):
     project = STATE['project']
     log(f'Using Julia project at {project}')
     os.makedirs(project, exist_ok=True)
-    # write a Project.toml specifying UUIDs and compatibility of required packages
-    with open(os.path.join(project, "Project.toml"), "wt") as fp:
-        print('[deps]', file=fp)
+    if os.getenv("PYTHON_JULIAPKG_MERGE_PROJECT", default=False):
+        log(f"Merging found Julia dependencies into Julia project at {project}")
+        # Read in the existing Project.toml
+        try:
+            with open(os.path.join(project, "Project.toml"), "rb") as fp:
+                p1toml = tomllib.load(fp)
+        except FileNotFoundError:
+            # Existing Project.toml doesn't exist, so create an empty dictionary.
+            p1toml = {"deps": {}, "compat": {}}
+
+        # Make sure everything in the existing Project.toml is compatible with the Julia packages juliapkg found.
         for pkg in pkgs:
-            print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
-        print(file=fp)
-        print('[compat]', file=fp)
-        for pkg in pkgs:
-            if pkg.version:
-                print(f'{pkg.name} = "{pkg.version}"', file=fp)
-        print(file=fp)
+            if pkg.name in p1toml["deps"].keys():
+                # pkg is a Julia dependency that already exists in the Julia project.
+                # Check that the UUIDs match.
+                assert pkg.uuid == p1toml["deps"][pkg.name]
+
+                if (pkg.name in p1toml["compat"].keys()) and pkg.version:
+                    # So, if there's an existing [compat] entry for the current package, merge them.
+                    compat1 = p1toml["compat"][pkg.name]
+                    version_merged = str(Compat.parse(pkg.version) & Compat.parse(compat1))
+                    if version_merged:
+                        p1toml["compat"][pkg.name] = version_merged
+                    else:
+                        raise(Exception(f'empty intersection between dep {pkg.name} {compat1} found in {os.path.join(project, "Project.toml")} and {pkg.name} {pkg.version} found by juliapkg'))
+                elif pkg.version:
+                    # There's a compat for the new Julia dependency found by juliapkg, but not one in the exsting Project.toml, so just use the new one.
+                    p1toml["compat"][pkg.name] = pkg.version
+
+            else:
+                # New Julia dependency, so add it.
+                p1toml["deps"][pkg.name] = pkg.uuid
+                if pkg.version:
+                    p1toml["compat"][pkg.name] = pkg.version
+
+        # Write out the new Project.toml.
+        with open(os.path.join(project, "Project.toml"), "wb") as fp:
+            tomli_w.dump(p1toml, fp)
+
+    else:
+        # write a Project.toml specifying UUIDs and compatibility of required packages
+        with open(os.path.join(project, "Project.toml"), "wt") as fp:
+            print('[deps]', file=fp)
+            for pkg in pkgs:
+                print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
+            print(file=fp)
+            print('[compat]', file=fp)
+            for pkg in pkgs:
+                if pkg.version:
+                    print(f'{pkg.name} = "{pkg.version}"', file=fp)
+            print(file=fp)
     if not STATE['offline']:
         # install the packages
         dev_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if pkg.dev])
