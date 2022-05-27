@@ -243,18 +243,22 @@ def resolve(force=False, dry_run=False):
     project = STATE['project']
     log(f'Using Julia project at {project}')
     os.makedirs(project, exist_ok=True)
-    # write a Project.toml specifying UUIDs and compatibility of required packages
-    with open(os.path.join(project, "Project.toml"), "wt") as fp:
-        print('[deps]', file=fp)
-        for pkg in pkgs:
-            print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
-        print(file=fp)
-        print('[compat]', file=fp)
-        for pkg in pkgs:
-            if pkg.version:
-                print(f'{pkg.name} = "{pkg.version}"', file=fp)
-        print(file=fp)
     if not STATE['offline']:
+        # write a Project.toml specifying UUIDs and compatibility of required packages
+        with open(os.path.join(project, "Project.toml"), "wt") as fp:
+            print('[deps]', file=fp)
+            for pkg in pkgs:
+                print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
+            print(file=fp)
+            print('[compat]', file=fp)
+            for pkg in pkgs:
+                if pkg.version:
+                    print(f'{pkg.name} = "{pkg.version}"', file=fp)
+            print(file=fp)
+        # remove Manifest.toml
+        manifest_path = os.path.join(project, "Manifest.toml")
+        if os.path.exists(manifest_path):
+            os.remove(manifest_path)
         # install the packages
         dev_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if pkg.dev])
         add_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
