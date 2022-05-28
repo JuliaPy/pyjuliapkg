@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 
-from subprocess import run
+from subprocess import run, PIPE
 from .install_julia import best_julia_version, install_julia, log
 from .compat import Version, Compat
 from .state import STATE
@@ -56,6 +56,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
                 if bestcompat is None or pr_ver in bestcompat:
                     return (pr_exe, pr_ver)
     # see if juliaup is installed
+    try_jl = True
     ju_exe = shutil.which('juliaup')
     if ju_exe:
         if upgrade and bestcompat is None:
@@ -63,15 +64,17 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         ans = ju_find_julia(bestcompat if upgrade else compat, install=install)
         if ans:
             return ans
-    else:
+        try_jl = install
+    if try_jl:
         # see if julia is installed
         jl_exe = shutil.which('julia')
         jl_ver = julia_version(jl_exe)
-        if jl_ver is not None and (compat is None or jl_ver in compat):
-            return (jl_exe, jl_ver)
-        else:
-            log(f'WARNING: You have Julia {jl_ver} installed but {compat} is required.')
-            log(f'  It is recommended that you upgrade Julia or install JuliaUp.')
+        if jl_ver is not None:
+            if compat is None or jl_ver in compat:
+                return (jl_exe, jl_ver)
+            else:
+                log(f'WARNING: You have Julia {jl_ver} installed but {compat} is required.')
+                log(f'  It is recommended that you upgrade Julia or install JuliaUp.')
     # install into the prefix
     if install and prefix is not None:
         if upgrade and bestcompat is None:
@@ -101,7 +104,11 @@ def ju_find_julia(compat=None, install=False):
     # install it
     if install:
         ver, _ = best_julia_version(compat)
-        run(['juliaup', 'add', ver], check=True)
+        proc = run(['juliaup', 'add', ver], stderr=PIPE)
+        if proc.returncode != 0:
+            msg = proc.stderr.decode('utf-8').strip()
+            log(f'WARNING: Failed to install Julia {ver} using JuliaUp: {msg}')
+            return
         ans = ju_find_julia_noinstall(compat)
         if ans:
             return ans
