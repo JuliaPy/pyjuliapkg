@@ -80,7 +80,7 @@ following strategies in order:
   subdirectory is used.
 - Otherwise `~/.julia/environments/pyjuliapkg` is used (respects `JULIA_DEPOT`).
 
-If the project location found by the strategy above contains a `Project.toml` it will be overwritten unless the environment variable `PYTHON_JULIA_MERGE_PROJECT` is non-empty.
+If the project location found by the strategy above contains a `Project.toml` it will be overwritten unless the environment variable `PYTHON_JULIAPKG_MERGE_PROJECT` is non-empty.
 Otherwise JuliaPkg will attempt to merge the Julia dependencies it finds in the `juliapkg.json` file(s) into the existing `Project.toml`.
 An error will be raised if the combination of Julia packages are not compatible with each other.
 
