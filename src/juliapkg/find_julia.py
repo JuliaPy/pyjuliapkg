@@ -5,7 +5,7 @@ import shutil
 from subprocess import run, PIPE
 from .install_julia import best_julia_version, install_julia, log
 from .compat import Version, Compat
-from .state import STATE
+from .state import STATE, get_config
 
 def julia_version(exe):
     try:
@@ -34,15 +34,15 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         install = False
     if upgrade:
         install = True
-    # env var PYTHON_JULIAPKG_EXE
-    ev_exe = os.getenv('PYTHON_JULIAPKG_EXE')
+    # configured executable
+    ev_exe = get_config('exe')
     if ev_exe:
         ev_ver = julia_version(ev_exe)
         if ev_ver is None:
-            raise Exception(f'PYTHON_JULIAPKG_EXE={ev_exe} is not a Julia executable.')
+            raise Exception(f'juliapkg_exe={ev_exe} is not a Julia executable.')
         else:
             if compat is not None and ev_ver not in compat:
-                log(f'WARNING: PYTHON_JULIAPKG_EXE={ev_exe} is Julia {ev_ver} but {compat} is required.')
+                log(f'WARNING: juliapkg_exe={ev_exe} is Julia {ev_ver} but {compat} is required.')
             return (ev_exe, ev_ver)
     # first look in the prefix
     if prefix is not None:

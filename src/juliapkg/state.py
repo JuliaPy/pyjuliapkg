@@ -1,6 +1,32 @@
 import os
+import sys
 
 STATE = {}
+
+def get_config(name, default=None):
+    # -X option
+    key = 'juliapkg_' + name.lower()
+    value = sys._xoptions.get(key)
+    if value is not None:
+        return value
+    # environment variable
+    key = 'PYTHON_JULIAPKG_' + name.upper()
+    value = os.getenv(key)
+    if value is not None:
+        return value
+    # fallback
+    return default
+
+def get_config_opts(name, opts, default=None):
+    value = get_config(name)
+    if value in opts:
+        if isinstance(opts, dict):
+            value = opts[value]
+        return value
+    return default
+
+def get_config_bool(name, default=False):
+    return get_config_opts(name, {'yes': True, True: True, 'no': False, False: False}, default)
 
 def reset_state():
     global STATE
@@ -19,10 +45,10 @@ def reset_state():
 
     # Determine where to put the julia environment
     # TODO: Can we more direcly figure out the environment from which python was called? Maybe find the first PATH entry containing python?
-    project = os.getenv('PYTHON_JULIAPKG_PROJECT')
+    project = get_config('project')
     if project:
         if not os.path.isabs(project):
-            raise Exception(f'PYTHON_JULIAPKG_PROJECT must be an absolute path')
+            raise Exception(f'juliapkg_project must be an absolute path')
         STATE['project'] = project
     else:
         vprefix = os.getenv('VIRTUAL_ENV')
@@ -47,7 +73,7 @@ def reset_state():
     STATE['install'] = os.path.join(STATE['prefix'], 'install')
 
     # offline
-    STATE['offline'] = os.getenv('PYTHON_JULIAPKG_OFFLINE', 'no').lower() == 'yes'
+    STATE['offline'] = get_config_bool('offline')
 
     # resolution
     STATE['resolved'] = False

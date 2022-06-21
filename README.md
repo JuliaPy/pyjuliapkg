@@ -60,9 +60,22 @@ Julia v1.*.* and the Example package v0.5.*:
 
 ## Details
 
+### Configuration
+
+JuliaPkg does not generally need configuring, but for advanced usage the following options
+are available. Options can be specified either as an environment variable or as an `-X`
+option to `python`. The `-X` option has higher precedence.
+
+| Environment Variable | `-X` Option | Description |
+| --- | --- | --- | --- |
+| `PYTHON_JULIAPKG_EXE=<exe>` | `-X juliapkg_exe=<exe>` | The Julia executable to use. |
+| `PYTHON_JULIAPKG_PROJECT=<project>` | `-X juliapkg_project=<project>` | The Julia project where pacakges are installed. |
+| `PYTHON_JULIAPKG_OFFLINE=<yes/no>` | `-X juliapkg_project=<yes/no>` | Work in Offline Mode - does not install Julia or any packages. |
+
 ### Which Julia gets used?
 
 JuliaPkg tries the following strategies in order to find Julia on your system:
+- If the `-X juliapkg_exe` argument to `python` is set, that is used.
 - If the environment variable `PYTHON_JULIAPKG_EXE` is set, that is used.
 - If `julia` is in your `PATH`, and is compatible, that is used.
 - If `juliaup` is in your `PATH`, it is used to install a compatible version of Julia.
@@ -75,6 +88,7 @@ More strategies may be added in a future release.
 
 JuliaPkg installs packages into a project whose location is determined by trying the
 following strategies in order:
+- If the `-X juliapkg_project` argument to `python` is set, that is used.
 - If the environment variable `PYTHON_JULIAPKG_PROJECT` is set, that is used.
 - If you are in a Python virtual environment or Conda environment, then `{env}/julia_env`
   subdirectory is used.
@@ -96,8 +110,9 @@ dependencies of your package.
 
 ### Offline mode
 
-If you set the environment variable `PYTHON_JULIAPKG_OFFLINE=yes` then JuliaPkg will
-operate in offline mode. This means it will not attempt to download Julia or any packages.
+If you set the environment variable `PYTHON_JULIAPKG_OFFLINE=yes` (or the option
+`-X juliapkg_offline=yes` to `python`) then JuliaPkg will operate in offline mode. This
+means it will not attempt to download Julia or any packages.
 
 Resolving will fail if Julia is not already installed. It is up to you to install any
 required Julia packages.
