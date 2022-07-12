@@ -103,7 +103,12 @@ def ju_find_julia(compat=None, install=False):
         return ans
     # install it
     if install:
-        ver, _ = best_julia_version(compat)
+        ver, info = best_julia_version(compat)
+        arch = info['files']['arch']
+        if arch == 'aarch64':
+            ver = ver + '~aarch64'
+        elif arch == 'x64':
+            ver = ver + '~x64'
         proc = run(['juliaup', 'add', ver], stderr=PIPE)
         if proc.returncode != 0:
             msg = proc.stderr.decode('utf-8').strip()
