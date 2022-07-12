@@ -3,7 +3,7 @@ import os
 import shutil
 
 from subprocess import run, PIPE
-from .install_julia import best_julia_version, install_julia, log
+from .install_julia import best_julia_version, install_julia, log, get_arch
 from .compat import Version, Compat
 from .state import STATE, get_config
 
@@ -104,7 +104,7 @@ def ju_find_julia(compat=None, install=False):
     # install it
     if install:
         ver, info = best_julia_version(compat)
-        arch = info['files']['arch']
+        arch = info['files'][0]['arch']
         if arch == 'aarch64':
             ver = ver + '~aarch64'
         elif arch == 'x64':
@@ -122,12 +122,16 @@ def ju_find_julia(compat=None, install=False):
 def ju_find_julia_noinstall(compat=None):
     judir = os.path.join(STATE['depot'], 'juliaup')
     metaname = os.path.join(judir, 'juliaup.json')
+    sys_arch = get_arch()
     if os.path.exists(metaname):
         with open(metaname) as fp:
             meta = json.load(fp)
         versions = []
         for (verstr, info) in meta.get('InstalledVersions', {}).items():
-            ver = Version(verstr.split('~')[0])
+            julia_ver_str, julia_arch = verstr.split('~')
+            if julia_arch != sys_arch:
+                continue
+            ver = Version(julia_ver_str)
             ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch, prerelease=ver.prerelease, build=tuple(x for x in ver.build if x != '0'))
             if compat is None or ver in compat:
                 if 'Path' in info:
