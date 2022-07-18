@@ -68,14 +68,14 @@ option to `python`. The `-X` option has higher precedence.
 
 | Environment Variable | `-X` Option | Description |
 | --- | --- | --- |
-| `PYTHON_JULIAPKG_EXE=<exe>` | `-X juliapkg_exe=<exe>` | The Julia executable to use. |
-| `PYTHON_JULIAPKG_PROJECT=<project>` | `-X juliapkg_project=<project>` | The Julia project where pacakges are installed. |
-| `PYTHON_JULIAPKG_OFFLINE=<yes/no>` | `-X juliapkg_project=<yes/no>` | Work in Offline Mode - does not install Julia or any packages. |
+| `PYTHON_JULIAPKG_EXE=<exe>` | `-X juliapkg-exe=<exe>` | The Julia executable to use. |
+| `PYTHON_JULIAPKG_PROJECT=<project>` | `-X juliapkg-project=<project>` | The Julia project where pacakges are installed. |
+| `PYTHON_JULIAPKG_OFFLINE=<yes/no>` | `-X juliapkg-offline=<yes/no>` | Work in Offline Mode - does not install Julia or any packages. |
 
 ### Which Julia gets used?
 
 JuliaPkg tries the following strategies in order to find Julia on your system:
-- If the `-X juliapkg_exe` argument to `python` is set, that is used.
+- If the `-X juliapkg-exe` argument to `python` is set, that is used.
 - If the environment variable `PYTHON_JULIAPKG_EXE` is set, that is used.
 - If `julia` is in your `PATH`, and is compatible, that is used.
 - If `juliaup` is in your `PATH`, it is used to install a compatible version of Julia.
@@ -88,7 +88,7 @@ More strategies may be added in a future release.
 
 JuliaPkg installs packages into a project whose location is determined by trying the
 following strategies in order:
-- If the `-X juliapkg_project` argument to `python` is set, that is used.
+- If the `-X juliapkg-project` argument to `python` is set, that is used.
 - If the environment variable `PYTHON_JULIAPKG_PROJECT` is set, that is used.
 - If you are in a Python virtual environment or Conda environment, then `{env}/julia_env`
   subdirectory is used.
@@ -102,17 +102,17 @@ JuliaPkg looks for `juliapkg.json` files in many locations, namely:
 - `{project}/pyjuliapkg` where project is as above (depending on your environment).
 - Every directory and direct sub-directory in `sys.path`.
 
-The last point means that if you put a `juliapkg.json` file in a package, then install
-that package, then JuliaPkg will find those dependencies and install them.
+The last point means that if you put a `juliapkg.json` file in a package, then install that
+package, then JuliaPkg will find those dependencies and install them.
 
 You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the
 dependencies of your package.
 
 ### Offline mode
 
-If you set the environment variable `PYTHON_JULIAPKG_OFFLINE=yes` (or the option
-`-X juliapkg_offline=yes` to `python`) then JuliaPkg will operate in offline mode. This
-means it will not attempt to download Julia or any packages.
+If you set the environment variable `PYTHON_JULIAPKG_OFFLINE=yes` (or call `python` with the
+option `-X juliapkg-offline=yes`) then JuliaPkg will operate in offline mode. This means it
+will not attempt to download Julia or any packages.
 
 Resolving will fail if Julia is not already installed. It is up to you to install any
 required Julia packages.

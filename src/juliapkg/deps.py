@@ -15,7 +15,7 @@ logger = logging.getLogger('juliapkg')
 
 ### META
 
-META_VERSION = 2  # increment whenever the format changes
+META_VERSION = 3  # increment whenever the format changes
 
 def load_meta():
     fn = STATE['meta']
@@ -87,6 +87,10 @@ def can_skip_resolve():
     deps = load_meta()
     if deps is None:
         logger.debug('no meta file')
+        return False
+    # resolve whenever the overridden Julia executable changes
+    if STATE['override_executable'] != deps['override_executable']:
+        logger.debug('set exectuable was %r now %r', deps['override_executable'], STATE['override_executable'])
         return False
     # resolve whenever Julia changes
     exe = deps["executable"]
@@ -282,6 +286,7 @@ def resolve(force=False, dry_run=False):
         "sys_path": sys.path,
         "pkgs": [pkg.dict() for pkg in pkgs],
         "offline": bool(STATE['offline']),
+        "override_executable": STATE['override_executable'],
     })
     STATE['resolved'] = True
     STATE['executable'] = exe

@@ -5,7 +5,7 @@ STATE = {}
 
 def get_config(name, default=None):
     # -X option
-    key = 'juliapkg_' + name.lower()
+    key = 'juliapkg-' + name.lower().replace('_', '-')
     value = sys._xoptions.get(key)
     if value is not None:
         return value
@@ -34,6 +34,9 @@ def reset_state():
 
     # Are we running a dev version?
     STATE['dev'] = os.path.exists(os.path.join(os.path.dirname(__file__), '..', '..', 'pyproject.toml'))
+
+    # Overrides
+    STATE['override_executable'] = get_config('exe')
 
     # Find the Julia depot
     depot_path = os.getenv('JULIA_DEPOT_PATH')

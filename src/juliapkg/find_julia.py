@@ -5,7 +5,7 @@ import shutil
 from subprocess import run, PIPE
 from .install_julia import best_julia_version, install_julia, log
 from .compat import Version, Compat
-from .state import STATE, get_config
+from .state import STATE
 
 def julia_version(exe):
     try:
@@ -35,7 +35,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     if upgrade:
         install = True
     # configured executable
-    ev_exe = get_config('exe')
+    ev_exe = STATE['override_executable']
     if ev_exe:
         ev_ver = julia_version(ev_exe)
         if ev_ver is None:
