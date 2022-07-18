@@ -8,22 +8,26 @@ def get_config(name, default=None):
     key = 'juliapkg-' + name.lower().replace('_', '-')
     value = sys._xoptions.get(key)
     if value is not None:
-        return value
+        return value, f'-X {key}'
     # environment variable
     key = 'PYTHON_JULIAPKG_' + name.upper()
     value = os.getenv(key)
     if value is not None:
-        return value
+        return value, key
     # fallback
-    return default
+    return default, f'<default for option {name}>'
 
 def get_config_opts(name, opts, default=None):
-    value = get_config(name)
+    value, key = get_config(name)
     if value in opts:
         if isinstance(opts, dict):
             value = opts[value]
-        return value
-    return default
+        return value, key
+    elif value is None:
+        return default, key
+    else:
+        opts_str = ', '.join(x for x in opts if isinstance(x, str))
+        raise ValueError(f'{key} must be one of: {opts_str}')
 
 def get_config_bool(name, default=False):
     return get_config_opts(name, {'yes': True, True: True, 'no': False, False: False}, default)
@@ -36,7 +40,7 @@ def reset_state():
     STATE['dev'] = os.path.exists(os.path.join(os.path.dirname(__file__), '..', '..', 'pyproject.toml'))
 
     # Overrides
-    STATE['override_executable'] = get_config('exe')
+    STATE['override_executable'], _ = get_config('exe')
 
     # Find the Julia depot
     depot_path = os.getenv('JULIA_DEPOT_PATH')
@@ -48,10 +52,10 @@ def reset_state():
 
     # Determine where to put the julia environment
     # TODO: Can we more direcly figure out the environment from which python was called? Maybe find the first PATH entry containing python?
-    project = get_config('project')
+    project, project_key = get_config('project')
     if project:
         if not os.path.isabs(project):
-            raise Exception(f'juliapkg_project must be an absolute path')
+            raise Exception(f'{project_key} must be an absolute path')
         STATE['project'] = project
     else:
         vprefix = os.getenv('VIRTUAL_ENV')
