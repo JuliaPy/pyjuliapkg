@@ -124,6 +124,8 @@ def ju_find_julia_noinstall(compat=None):
         for (verstr, info) in meta.get('InstalledVersions', {}).items():
             ver = Version(verstr.split('~')[0])
             ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch, prerelease=ver.prerelease, build=tuple(x for x in ver.build if x != '0'))
+            if ver.prerelease:
+                continue
             if compat is None or ver in compat:
                 if 'Path' in info:
                     ext = '.exe' if os.name == 'nt' else ''
