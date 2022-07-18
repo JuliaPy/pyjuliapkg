@@ -80,7 +80,7 @@ def reset_state():
     STATE['install'] = os.path.join(STATE['prefix'], 'install')
 
     # offline
-    STATE['offline'] = get_config_bool('offline')
+    STATE['offline'], _ = get_config_bool('offline')
 
     # resolution
     STATE['resolved'] = False
