@@ -50,6 +50,15 @@ def get_arch():
     arch = platform.machine().lower()
     return arch_aliases.get(arch.lower(), arch)
 
+short_arches = {
+    'i686': 'x86',
+    'x86_64': 'x64',
+}
+
+def get_short_arch():
+    arch = get_arch()
+    return short_arches.get(arch, arch)
+
 libc_aliases = {
     'glibc': 'gnu',
 }

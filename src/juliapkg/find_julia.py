@@ -3,7 +3,7 @@ import os
 import shutil
 
 from subprocess import run, PIPE
-from .install_julia import best_julia_version, install_julia, log, get_arch
+from .install_julia import best_julia_version, install_julia, log, get_short_arch
 from .compat import Version, Compat
 from .state import STATE
 
@@ -59,9 +59,8 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     try_jl = True
     ju_exe = shutil.which('juliaup')
     if ju_exe:
-        if upgrade and bestcompat is None:
-            bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
-        ans = ju_find_julia(bestcompat if upgrade else compat, install=install)
+        ju_compat = Compat.parse('==' + ju_best_julia_version(compat)[0]) if upgrade else compat
+        ans = ju_find_julia(ju_compat, install=install)
         if ans:
             return ans
         try_jl = install
@@ -96,6 +95,34 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     compatstr = '' if compat is None else f' {compat}'
     raise Exception(f'could not find Julia{compatstr}')
 
+def ju_list_julia_versions(compat=None):
+    proc = run(['juliaup', 'list'], check=True, stdout=PIPE)
+    vers = {}
+    arch = get_short_arch()
+    for line in proc.stdout.decode('utf-8').splitlines():
+        words = line.strip().split()
+        if len(words) == 2:
+            c, v = words
+            try:
+                ver = Version(v)
+            except Exception:
+                continue
+            if ver.prerelease:
+                continue
+            if arch not in ver.build:
+                continue
+            ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch)
+            if compat is None or ver in compat:
+                vers.setdefault(f'{ver.major}.{ver.minor}.{ver.patch}', []).append(c)
+    return vers
+
+def ju_best_julia_version(compat=None):
+    vers = ju_list_julia_versions(compat)
+    if not vers:
+        raise Exception(f'no version of Julia is compatible with {compat} - perhaps you need to update JuliaUp')
+    v = sorted(vers.keys(), key=Version, reverse=True)[0]
+    return v, vers[v]
+
 def ju_find_julia(compat=None, install=False):
     # see if it is already installed
     ans = ju_find_julia_noinstall(compat)
@@ -103,18 +130,21 @@ def ju_find_julia(compat=None, install=False):
         return ans
     # install it
     if install:
-        ver, info = best_julia_version(compat)
-        arch = info['files'][0]['arch']
-        if arch == 'aarch64':
-            ver = ver + '~aarch64'
-        elif arch == 'x64':
-            ver = ver + '~x64'
-        proc = run(['juliaup', 'add', ver], stderr=PIPE)
-        if proc.returncode != 0:
-            msg = proc.stderr.decode('utf-8').strip()
-            log(f'WARNING: Failed to install Julia {ver} using JuliaUp: {msg}')
-            return
-        ans = ju_find_julia_noinstall(compat)
+        ver, channels = ju_best_julia_version(compat)
+        log(f'Installing Julia {ver} using JuliaUp')
+        msgs = []
+        for channel in channels:
+            proc = run(['juliaup', 'add', channel], stderr=PIPE)
+            if proc.returncode == 0:
+                msgs = []
+                break
+            else:
+                msg = proc.stderr.decode('utf-8').strip()
+                if msg not in msgs:
+                    msgs.append(msg)
+        if msgs:
+            log(f'WARNING: Failed to install Julia {ver} using JuliaUp: {msgs}')
+        ans = ju_find_julia_noinstall(Compat.parse('==' + ver))
         if ans:
             return ans
         Exception(f'JuliaUp just installed Julia {ver} but cannot find it')
@@ -122,19 +152,16 @@ def ju_find_julia(compat=None, install=False):
 def ju_find_julia_noinstall(compat=None):
     judir = os.path.join(STATE['depot'], 'juliaup')
     metaname = os.path.join(judir, 'juliaup.json')
-    sys_arch = get_arch()
+    arch = get_short_arch()
     if os.path.exists(metaname):
         with open(metaname) as fp:
             meta = json.load(fp)
         versions = []
         for (verstr, info) in meta.get('InstalledVersions', {}).items():
-            julia_ver_str, julia_arch = verstr.split('~')
-            if julia_arch != sys_arch:
+            ver = Version(verstr.replace('~', '.'))  # juliaup used to use VER~ARCH
+            if ver.prerelease or arch not in ver.build:
                 continue
-            ver = Version(julia_ver_str)
-            ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch, prerelease=ver.prerelease, build=tuple(x for x in ver.build if x != '0'))
-            if ver.prerelease:
-                continue
+            ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch)
             if compat is None or ver in compat:
                 if 'Path' in info:
                     ext = '.exe' if os.name == 'nt' else ''
