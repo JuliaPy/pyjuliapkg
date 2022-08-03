@@ -38,7 +38,7 @@ class Compat:
     def parse(cls, verstr):
         """Parse a Julia compat specifier from a string.
 
-        A specifier is a comma-separated list of clauses. The prefixes '^', '~' and '=='
+        A specifier is a comma-separated list of clauses. The prefixes '^', '~' and '='
         are supported. No prefix is equivalent to '^'.
         """
         clauses = []
@@ -67,7 +67,7 @@ class Compat:
                         else:
                             nfixed = 2
                     clause = Range(version, nfixed)
-                elif part.startswith('=='):
+                elif part.startswith('='):
                     version = Version(part[2:])
                     clause = Eq(version)
                 else:
@@ -82,7 +82,7 @@ class Eq:
         self.version = version
 
     def __str__(self):
-        return f'=={self.version}'
+        return f'={self.version}'
 
     def __repr__(self):
         return f'{type(self).__name__}({self.version!r})'
