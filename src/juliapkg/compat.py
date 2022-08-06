@@ -68,7 +68,7 @@ class Compat:
                             nfixed = 2
                     clause = Range(version, nfixed)
                 elif part.startswith('='):
-                    version = Version(part[2:])
+                    version = Version(part[1:])
                     clause = Eq(version)
                 else:
                     raise ValueError(f'invalid version: {part!r}')

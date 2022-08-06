@@ -52,14 +52,14 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         if pr_ver is not None:
             if compat is None or pr_ver in compat:
                 if upgrade and bestcompat is None:
-                    bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
+                    bestcompat = Compat.parse('=' + best_julia_version(compat)[0])
                 if bestcompat is None or pr_ver in bestcompat:
                     return (pr_exe, pr_ver)
     # see if juliaup is installed
     try_jl = True
     ju_exe = shutil.which('juliaup')
     if ju_exe:
-        ju_compat = Compat.parse('==' + ju_best_julia_version(compat)[0]) if upgrade else compat
+        ju_compat = Compat.parse('=' + ju_best_julia_version(compat)[0]) if upgrade else compat
         ans = ju_find_julia(ju_compat, install=install)
         if ans:
             return ans
@@ -77,7 +77,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     # install into the prefix
     if install and prefix is not None:
         if upgrade and bestcompat is None:
-            bestcompat = Compat.parse('==' + best_julia_version(compat)[0])
+            bestcompat = Compat.parse('=' + best_julia_version(compat)[0])
         ver, info = best_julia_version(bestcompat if upgrade else compat)
         log(f'WARNING: About to install Julia {ver} to {prefix}.')
         log(f'  If you use juliapkg in more than one environment, you are likely to have Julia')
@@ -144,7 +144,7 @@ def ju_find_julia(compat=None, install=False):
                     msgs.append(msg)
         if msgs:
             log(f'WARNING: Failed to install Julia {ver} using JuliaUp: {msgs}')
-        ans = ju_find_julia_noinstall(Compat.parse('==' + ver))
+        ans = ju_find_julia_noinstall(Compat.parse('=' + ver))
         if ans:
             return ans
         Exception(f'JuliaUp just installed Julia {ver} but cannot find it')

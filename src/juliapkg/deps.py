@@ -15,7 +15,7 @@ logger = logging.getLogger('juliapkg')
 
 ### META
 
-META_VERSION = 3  # increment whenever the format changes
+META_VERSION = 4  # increment whenever the format changes
 
 def load_meta():
     fn = STATE['meta']
@@ -109,27 +109,24 @@ def can_skip_resolve():
     if isdev != STATE["dev"]:
         logger.debug('changed dev %s to %s', isdev, STATE['dev'])
         return False
-    # resolve whenever anything in sys.path changes
-    timestamp = deps["timestamp"]
-    timestamp = max(os.path.getmtime(STATE["meta"]), timestamp)
-    sys_path = deps["sys_path"]
-    if sys_path != sys.path:
-        logger.debug('sys.path changed %s to %s', sys_path, sys.path)
+    # resolve whenever any deps files change
+    files0 = set(deps_files())
+    files = deps['deps_files']
+    filesdiff = set(files.keys()).difference(files0)
+    if filesdiff:
+        logger.debug('deps files added %s', filesdiff)
         return False
-    for path in sys.path:
-        here = not path
-        if here:
-            path = os.getcwd()
-        if not os.path.exists(path):
-            continue
-        if (not here) and (os.path.getmtime(path) > timestamp):
-            logger.debug('directory changed %r', path)
+    filesdiff = files0.difference(files.keys())
+    if filesdiff:
+        logger.debug('deps files removed %s', filesdiff)
+        return False
+    for (filename, fileinfo) in files.items():
+        if not os.path.isfile(filename):
+            logger.debug('deps file no longer exists %r', filename)
             return False
-        if os.path.isdir(path):
-            fn = os.path.join(path, "juliapkg.json")
-            if os.path.exists(fn) and os.path.getmtime(fn) > timestamp:
-                logger.debug('file changed %r', fn)
-                return False
+        if os.path.getmtime(filename) > fileinfo['timestamp']:
+            logger.debug('deps file has changed %r', filename)
+            return False
     return deps
 
 def deps_files():
@@ -282,8 +279,10 @@ def resolve(force=False, dry_run=False):
         "dev": STATE["dev"],
         "version": str(ver),
         "executable": exe,
-        "timestamp": time.time(),
-        "sys_path": sys.path,
+        "deps_files": {
+            filename: {'timestamp': os.path.getmtime(filename)}
+            for filename in deps_files()
+        },
         "pkgs": [pkg.dict() for pkg in pkgs],
         "offline": bool(STATE['offline']),
         "override_executable": STATE['override_executable'],
