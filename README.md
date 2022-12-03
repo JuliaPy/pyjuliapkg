@@ -1,5 +1,8 @@
 # JuliaPkg
 
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Tests](https://github.com/cjdoris/pyjuliapkg/actions/workflows/tests.yml/badge.svg)](https://github.com/cjdoris/pyjuliapkg/actions/workflows/tests.yml)
+
 Do you want to use [Julia](https://julialang.org/) in your Python script/project/package?
 No problem! JuliaPkg will help you out!
 - Declare the version of Julia you require in a `juliapkg.json` file.
