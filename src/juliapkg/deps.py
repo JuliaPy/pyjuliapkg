@@ -269,10 +269,17 @@ def resolve(force=False, dry_run=False):
         if add_pkgs:
             script.append(f'Pkg.add([{add_pkgs}])')
         script.append('Pkg.resolve()')
+        script.append('Pkg.precompile()')
         log(f'Installing packages:')
         for line in script:
             log('julia>', line, cont=True)
-        run([exe, '--project='+project, '--startup-file=no', '-e', '; '.join(script)], check=True)
+        env = os.environ.copy()
+        if sys.executable:
+            # prefer PythonCall to use the current Python executable
+            # TODO: this is a hack, it would be better for PythonCall to detect that Julia
+            #   is being called from Python
+            env.setdefault('JULIA_PYTHONCALL_EXE', sys.executable)
+        run([exe, '--project='+project, '--startup-file=no', '-e', '; '.join(script)], check=True, env=env)
     # record that we resolved
     save_meta({
         "meta_version": META_VERSION,
