@@ -1,8 +1,8 @@
 # JuliaPkg
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![Tests](https://github.com/cjdoris/pyjuliapkg/actions/workflows/tests.yml/badge.svg)](https://github.com/cjdoris/pyjuliapkg/actions/workflows/tests.yml)
-[![Codecov](https://codecov.io/gh/cjdoris/pyjuliapkg/branch/main/graph/badge.svg?token=A813UUIHGS)](https://codecov.io/gh/cjdoris/pyjuliapkg)
+[![Tests](https://github.com/JuliaPy/pyjuliapkg/actions/workflows/tests.yml/badge.svg)](https://github.com/JuliaPy/pyjuliapkg/actions/workflows/tests.yml)
+[![Codecov](https://codecov.io/gh/JuliaPy/pyjuliapkg/branch/main/graph/badge.svg?token=A813UUIHGS)](https://codecov.io/gh/JuliaPy/pyjuliapkg)
 
 Do you want to use [Julia](https://julialang.org/) in your Python script/project/package?
 No problem! JuliaPkg will help you out!
