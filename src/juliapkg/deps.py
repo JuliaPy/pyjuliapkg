@@ -263,7 +263,7 @@ def resolve(force=False, dry_run=False):
         # install the packages
         dev_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if pkg.dev])
         add_pkgs = ', '.join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
-        script = ['import Pkg']
+        script = ['import Pkg', 'Pkg.Registry.update()']
         if dev_pkgs:
             script.append(f'Pkg.develop([{dev_pkgs}])')
         if add_pkgs:
