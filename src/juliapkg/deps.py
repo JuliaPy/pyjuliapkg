@@ -36,12 +36,13 @@ def save_meta(meta):
 ### RESOLVE
 
 class PkgSpec:
-    def __init__(self, name, uuid, dev=False, version=None, path=None, url=None, rev=None):
+    def __init__(self, name, uuid, dev=False, version=None, path=None, subdir=None, url=None, rev=None):
         self.name = name
         self.uuid = uuid
         self.dev = dev
         self.version = version
         self.path = path
+        self.subdir = subdir
         self.url = url
         self.rev = rev
 
@@ -49,6 +50,8 @@ class PkgSpec:
         args = ['name="{}"'.format(self.name), 'uuid="{}"'.format(self.uuid)]
         if self.path is not None:
             args.append('path=raw"{}"'.format(self.path))
+        if self.subdir is not None:
+            args.append('subdir="{}"'.format(self.subdir))
         if self.url is not None:
             args.append('url=raw"{}"'.format(self.url))
         if self.rev is not None:
@@ -62,6 +65,7 @@ class PkgSpec:
             "dev": self.dev,
             "version": str(self.version),
             "path": self.path,
+            "subdir": self.subdir,
             "url": self.url,
             "rev": self.rev,
         }
@@ -76,6 +80,8 @@ class PkgSpec:
             ans['version'] = str(self.version)
         if self.path is not None:
             ans['path'] = self.path
+        if self.subdir is not None:
+            ans['subdir'] = self.subdir
         if self.url is not None:
             ans['url'] = self.url
         if self.rev is not None:
@@ -192,6 +198,7 @@ def required_packages():
         kw = {'name': name}
         merge_unique(kw, kfvs, 'uuid')
         merge_unique(kw, kfvs, 'path')
+        merge_unique(kw, kfvs, 'subdir')
         merge_unique(kw, kfvs, 'url')
         merge_unique(kw, kfvs, 'rev')
         merge_compat(kw, kfvs, 'version')
