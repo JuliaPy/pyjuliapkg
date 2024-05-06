@@ -58,7 +58,7 @@ def reset_state():
             raise Exception(f'{project_key} must be an absolute path')
         STATE['project'] = project
     else:
-        vprefix = os.getenv('VIRTUAL_ENV')
+        vprefix = sys.prefix if sys.prefix != sys.base_prefix else None
         cprefix = os.getenv('CONDA_PREFIX')
         if cprefix and vprefix:
             raise Exception('You are using both a virtual and conda environment, cannot figure out which to use!')
