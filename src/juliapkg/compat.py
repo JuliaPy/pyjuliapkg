@@ -19,7 +19,7 @@ class Compat:
     """A Julia compat specifier."""
 
     def __init__(self, clauses=[]):
-        self.clauses = list(clauses)
+        self.clauses = [clause for clause in clauses if not clause.is_empty()]
 
     def __str__(self):
         return ', '.join(str(clause) for clause in self.clauses)
