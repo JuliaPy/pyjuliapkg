@@ -51,26 +51,23 @@ def reset_state():
         STATE['depot'] = os.path.abspath(os.path.join(os.path.expanduser('~'), '.julia'))
 
     # Determine where to put the julia environment
-    # TODO: Can we more direcly figure out the environment from which python was called? Maybe find the first PATH entry containing python?
     project, project_key = get_config('project')
     if project:
         if not os.path.isabs(project):
             raise Exception(f'{project_key} must be an absolute path')
         STATE['project'] = project
     else:
-        vprefix = sys.prefix if sys.prefix != sys.base_prefix else None
-        cprefix = os.getenv('CONDA_PREFIX')
-        if cprefix and vprefix:
-            raise Exception('You are using both a virtual and conda environment, cannot figure out which to use!')
-        elif cprefix:
-            prefix = cprefix
-        elif vprefix:
-            prefix = vprefix
+        if sys.prefix != sys.base_prefix:
+            # definitely in a virtual environment
+            prefix = sys.prefix
         else:
-            prefix = None
+            # maybe in a conda environment
+            prefix = os.getenv("CONDA_PREFIX")
         if prefix is None:
+            # system python installation
             STATE['project'] = os.path.join(STATE['depot'], 'environments', 'pyjuliapkg')
         else:
+            # in a virtual or conda environment
             STATE['project'] = os.path.abspath(os.path.join(prefix, 'julia_env'))
 
     # meta file
