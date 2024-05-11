@@ -152,11 +152,14 @@ def deps_files():
             ans.append(fn)
     return list(set(os.path.normcase(os.path.normpath(os.path.abspath(fn))) for fn in ans if os.path.isfile(fn)))
 
-def required_packages():
+def find_requirements():
     # read all dependencies into a dict: name -> key -> file -> value
+    # read all julia compats into a dict: file -> compat
     import json
+    compats = {}
     all_deps = {}
     for fn in deps_files():
+        log("Found dependencies: {}".format(fn))
         with open(fn) as fp:
             deps = json.load(fp)
         for (name, kvs) in deps.get("packages", {}).items():
@@ -166,6 +169,9 @@ def required_packages():
                     # resolve paths relative to the directory containing the file
                     v = os.path.normcase(os.path.normpath(os.path.join(os.path.dirname(fn), v)))
                 dep.setdefault(k, {})[fn] = v
+        c = deps.get("julia")
+        if c is not None:
+            compats[fn] = Compat.parse(c)
     # merges non-unique values
     def merge_unique(dep, kfvs, k):
         fvs = kfvs.pop(k, None)
@@ -204,17 +210,7 @@ def required_packages():
         merge_compat(kw, kfvs, 'version')
         merge_any(kw, kfvs, 'dev')
         deps.append(PkgSpec(**kw))
-    return deps
-
-def required_julia():
-    import json
-    compats = {}
-    for fn in deps_files():
-        with open(fn) as fp:
-            deps = json.load(fp)
-            c = deps.get("julia")
-            if c is not None:
-                compats[fn] = Compat.parse(c)
+    # julia compat
     compat = None
     for c in compats.values():
         if compat is None:
@@ -223,7 +219,7 @@ def required_julia():
             compat &= c
     if compat is not None and not compat:
         raise Exception("'julia' compat entries have empty intersection:\n{}".format('\n'.join(['- {!r} at {}'.format(v,f) for (f,v) in compats.items()])))
-    return compat
+    return compat, deps
 
 def resolve(force=False, dry_run=False):
     # see if we can skip resolving
@@ -239,10 +235,8 @@ def resolve(force=False, dry_run=False):
     if dry_run:
         return False
     STATE['resolved'] = False
-    # get julia compat
-    compat = required_julia()
-    # get required packages
-    pkgs = required_packages()
+    # get julia compat and required packages
+    compat, pkgs = find_requirements()
     # find a compatible julia executable
     log(f'Locating Julia{"" if compat is None else " "+str(compat)}')
     exe, ver = find_julia(compat=compat, prefix=STATE['install'], install=True, upgrade=True)
