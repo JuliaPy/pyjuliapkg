@@ -1,4 +1,6 @@
+import json
 import os
+import tempfile
 
 import juliapkg
 
@@ -42,13 +44,45 @@ def test_offline():
     assert isinstance(offline, bool)
 
 
-def test_add():
-    pass
+def test_add_rm():
+    with tempfile.TemporaryDirectory() as tdir:
 
+        def deps():
+            fn = os.path.join(tdir, "juliapkg.json")
+            if not os.path.exists(fn):
+                return None
+            with open(os.path.join(tdir, "juliapkg.json")) as fp:
+                return json.load(fp)
 
-def test_rm():
-    pass
+        assert deps() is None
 
+        juliapkg.add(
+            "Example1",
+            target=tdir,
+            uuid="0001",
+        )
 
-def test_require_julia():
-    pass
+        assert deps() == {"packages": {"Example1": {"uuid": "0001"}}}
+
+        juliapkg.add("Example2", target=tdir, uuid="0002")
+
+        assert deps() == {
+            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}}
+        }
+
+        juliapkg.require_julia("~1.5, 1.7", target=tdir)
+
+        assert deps() == {
+            "julia": "~1.5, ^1.7",
+            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}},
+        }
+
+        juliapkg.require_julia(None, target=tdir)
+
+        assert deps() == {
+            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}}
+        }
+
+        juliapkg.rm("Example1", target=tdir)
+
+        assert deps() == {"packages": {"Example2": {"uuid": "0002"}}}
