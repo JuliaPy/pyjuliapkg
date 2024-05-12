@@ -1,6 +1,6 @@
+import gzip
 import hashlib
 import io
-import gzip
 import json
 import os
 import platform
@@ -177,7 +177,7 @@ def download_julia(f):
                 )
                 t = time.time() + freq
     log("  download complete", cont=True)
-    log(f"Verifying download")
+    log("Verifying download")
     buf.seek(0)
     m = hashlib.sha256()
     m.update(buf.read())

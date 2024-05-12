@@ -1,4 +1,5 @@
 import re
+
 from semantic_version import Version
 
 _re_partial_version = re.compile(r"^([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$")

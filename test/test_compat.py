@@ -1,6 +1,5 @@
 import pytest
-
-from juliapkg.compat import Version, Compat, Range
+from juliapkg.compat import Compat, Range, Version
 
 
 class TestRange:

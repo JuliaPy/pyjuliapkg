@@ -2,14 +2,12 @@ import json
 import logging
 import os
 import sys
-import time
-
 from subprocess import run
 
 from .compat import Compat, Version
-from .state import STATE
-from .find_julia import julia_version, find_julia
+from .find_julia import find_julia, julia_version
 from .install_julia import log
+from .state import STATE
 
 logger = logging.getLogger("juliapkg")
 
@@ -326,7 +324,7 @@ def resolve(force=False, dry_run=False):
             script.append(f"Pkg.add([{add_pkgs}])")
         script.append("Pkg.resolve()")
         script.append("Pkg.precompile()")
-        log(f"Installing packages:")
+        log("Installing packages:")
         for line in script:
             log("julia>", line, cont=True)
         env = os.environ.copy()
@@ -436,7 +434,7 @@ def status(target=None):
         print()
     pkgs = deps.get("packages")
     if pkgs:
-        print(f"Packages:")
+        print("Packages:")
         for name, info in pkgs.items():
             print(f"  {name}: {info}")
 

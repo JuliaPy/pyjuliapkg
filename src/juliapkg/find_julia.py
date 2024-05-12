@@ -1,10 +1,10 @@
 import json
 import os
 import shutil
+from subprocess import PIPE, run
 
-from subprocess import run, PIPE
-from .install_julia import best_julia_version, install_julia, log, get_short_arch
-from .compat import Version, Compat
+from .compat import Compat, Version
+from .install_julia import best_julia_version, get_short_arch, install_julia, log
 from .state import STATE
 
 
@@ -85,7 +85,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
                 log(
                     f"WARNING: You have Julia {jl_ver} installed but {compat} is required."
                 )
-                log(f"  It is recommended that you upgrade Julia or install JuliaUp.")
+                log("  It is recommended that you upgrade Julia or install JuliaUp.")
     # install into the prefix
     if install and prefix is not None:
         if upgrade and bestcompat is None:
@@ -93,13 +93,13 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         ver, info = best_julia_version(bestcompat if upgrade else compat)
         log(f"WARNING: About to install Julia {ver} to {prefix}.")
         log(
-            f"  If you use juliapkg in more than one environment, you are likely to have Julia"
+            "  If you use juliapkg in more than one environment, you are likely to have Julia"
         )
-        log(f"  installed in multiple locations. It is recommended to install JuliaUp")
+        log("  installed in multiple locations. It is recommended to install JuliaUp")
         log(
-            f"  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)"
+            "  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)"
         )
-        log(f"  yourself.")
+        log("  yourself.")
         install_julia(info, prefix)
         pr_exe = shutil.which(os.path.join(prefix, "bin", "julia" + ext))
         pr_ver = julia_version(pr_exe)
