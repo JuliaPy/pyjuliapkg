@@ -118,7 +118,8 @@ def compatible_julia_versions(compat=None):
     triplets = {f["triplet"] for (k, v) in ans.items() for f in v["files"]}
     if len(triplets) > 1:
         raise Exception(
-            f"multiple matching triplets {sorted(triplets)} - this is probably a bug, please report"
+            f"multiple matching triplets {sorted(triplets)} - this is probably a bug,"
+            " please report"
         )
     return ans
 
@@ -172,7 +173,8 @@ def download_julia(f):
             buf.write(data)
             if time.time() > t:
                 log(
-                    f"  downloaded {buf.tell()/(1<<20):.1f} MB of {size/(1<<20):.1f} MB",
+                    f"  downloaded {buf.tell()/(1<<20):.1f} MB of {size/(1<<20):.1f}"
+                    " MB",
                     cont=True,
                 )
                 t = time.time() + freq

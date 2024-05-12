@@ -1,11 +1,23 @@
 from .deps import (
-    status,
-    resolve,
-    executable,
-    project,
     PkgSpec,
-    require_julia,
     add,
-    rm,
+    executable,
     offline,
+    project,
+    require_julia,
+    resolve,
+    rm,
+    status,
 )
+
+__all__ = [
+    "status",
+    "resolve",
+    "executable",
+    "project",
+    "PkgSpec",
+    "require_julia",
+    "add",
+    "rm",
+    "offline",
+]

@@ -330,8 +330,8 @@ def resolve(force=False, dry_run=False):
         env = os.environ.copy()
         if sys.executable:
             # prefer PythonCall to use the current Python executable
-            # TODO: this is a hack, it would be better for PythonCall to detect that Julia
-            #   is being called from Python
+            # TODO: this is a hack, it would be better for PythonCall to detect that
+            #   Julia is being called from Python
             env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
         run(
             [exe, "--project=" + project, "--startup-file=no", "-e", "; ".join(script)],
@@ -381,7 +381,8 @@ def cur_deps_file(target=None):
         return os.path.abspath(target)
     else:
         raise ValueError(
-            "target must be an existing directory, or a file name in an existing directory"
+            "target must be an existing directory,"
+            " or a file name in an existing directory"
         )
 
 
