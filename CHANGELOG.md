@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.13 (2024-05-12)
+* Internal changes.
+
 ## v0.1.12 (2024-05-12)
 * Hyphen compat bounds (e.g. "1.6 - 1") now supported.
 * Resolving no longer throws an error from nested environments.
