@@ -105,7 +105,7 @@ def compatible_julia_versions(compat=None):
                 continue
             if compat is not None:
                 try:
-                    ver = Version(f["version"])
+                    ver = Version.parse(f["version"])
                 except Exception:
                     continue
                 if ver not in compat:
@@ -128,7 +128,7 @@ def best_julia_version(compat=None):
     vers = compatible_julia_versions(compat)
     if not vers:
         raise Exception(f"no version of Julia is compatible with {compat}")
-    v = sorted(vers.keys(), key=Version, reverse=True)[0]
+    v = sorted(vers.keys(), key=Version.parse, reverse=True)[0]
     return v, vers[v]
 
 

@@ -281,7 +281,7 @@ def resolve(force=False, dry_run=False):
         if deps:
             STATE["resolved"] = True
             STATE["executable"] = deps["executable"]
-            STATE["version"] = Version(deps["version"])
+            STATE["version"] = Version.parse(deps["version"])
             return True
     if dry_run:
         return False

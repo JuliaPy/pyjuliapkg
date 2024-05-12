@@ -1,6 +1,6 @@
 import re
 
-from semantic_version import Version
+from semver import Version
 
 _re_partial_version = re.compile(r"^([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$")
 
@@ -10,10 +10,7 @@ def _parse_partial_version(x):
     if m is None:
         return None, None
     major, minor, patch = m.groups()
-    major = int(major)
-    minor = None if minor is None else int(minor)
-    patch = None if patch is None else int(patch)
-    v = Version(major=major, minor=minor or 0, patch=patch or 0)
+    v = Version(major, minor or 0, patch or 0)
     n = 1 if minor is None else 2 if patch is None else 3
     return (v, n)
 
@@ -65,51 +62,51 @@ class Compat:
 
 class Range:
     def __init__(self, lo, hi):
-        self.lo = lo if isinstance(lo, Version) else Version(lo)
-        self.hi = hi if isinstance(hi, Version) else Version(hi)
+        self.lo = lo
+        self.hi = hi
 
     @classmethod
     def tilde(cls, v, n):
         lo = Version(
-            major=v.major,
-            minor=v.minor if n >= 2 else 0,
-            patch=v.patch if n >= 3 else 0,
+            v.major,
+            v.minor if n >= 2 else 0,
+            v.patch if n >= 3 else 0,
         )
         hi = (
-            v.next_major()
+            v.bump_major()
             if n < 2
-            else v.next_minor()
+            else v.bump_minor()
             if v.major != 0 or v.minor != 0 or n < 3
-            else v.next_patch()
+            else v.bump_patch()
         )
         return Range(lo, hi)
 
     @classmethod
     def caret(cls, v, n):
         lo = Version(
-            major=v.major,
-            minor=v.minor if n >= 2 else 0,
-            patch=v.patch if n >= 3 else 0,
+            v.major,
+            v.minor if n >= 2 else 0,
+            v.patch if n >= 3 else 0,
         )
         hi = (
-            v.next_major()
+            v.bump_major()
             if v.major != 0 or n < 2
-            else v.next_minor()
+            else v.bump_minor()
             if v.minor != 0 or n < 3
-            else v.next_patch()
+            else v.bump_patch()
         )
         return Range(lo, hi)
 
     @classmethod
     def equality(cls, v):
         lo = v
-        hi = v.next_patch()
+        hi = v.bump_patch()
         return Range(lo, hi)
 
     @classmethod
     def hyphen(cls, v1, v2, n):
         lo = v1
-        hi = v2.next_major() if n < 2 else v2.next_minor() if n < 3 else v2.next_patch()
+        hi = v2.bump_major() if n < 2 else v2.bump_minor() if n < 3 else v2.bump_patch()
         return Range(lo, hi)
 
     @classmethod

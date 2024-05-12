@@ -16,7 +16,7 @@ def julia_version(exe):
             .split()
         )
         if words[0].lower() == "julia" and words[1].lower() == "version":
-            return Version(words[2])
+            return Version.parse(words[2])
     except Exception:
         pass
 
@@ -120,14 +120,14 @@ def ju_list_julia_versions(compat=None):
         if len(words) == 2:
             c, v = words
             try:
-                ver = Version(v)
+                ver = Version.parse(v)
             except Exception:
                 continue
             if ver.prerelease:
                 continue
             if arch not in ver.build:
                 continue
-            ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch)
+            ver = Version(ver.major, ver.minor, ver.patch)
             if compat is None or ver in compat:
                 vers.setdefault(f"{ver.major}.{ver.minor}.{ver.patch}", []).append(c)
     return vers
@@ -140,7 +140,7 @@ def ju_best_julia_version(compat=None):
             f"no version of Julia is compatible with {compat} - perhaps you need to"
             " update JuliaUp"
         )
-    v = sorted(vers.keys(), key=Version, reverse=True)[0]
+    v = sorted(vers.keys(), key=Version.parse, reverse=True)[0]
     return v, vers[v]
 
 
@@ -180,10 +180,12 @@ def ju_find_julia_noinstall(compat=None):
             meta = json.load(fp)
         versions = []
         for verstr, info in meta.get("InstalledVersions", {}).items():
-            ver = Version(verstr.replace("~", "."))  # juliaup used to use VER~ARCH
+            ver = Version.parse(
+                verstr.replace("~", ".")
+            )  # juliaup used to use VER~ARCH
             if ver.prerelease or arch not in ver.build:
                 continue
-            ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch)
+            ver = Version(ver.major, ver.minor, ver.patch)
             if compat is None or ver in compat:
                 if "Path" in info:
                     ext = ".exe" if os.name == "nt" else ""
