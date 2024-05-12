@@ -7,13 +7,19 @@ from .install_julia import best_julia_version, install_julia, log, get_short_arc
 from .compat import Version, Compat
 from .state import STATE
 
+
 def julia_version(exe):
     try:
-        words = run([exe, '--version'], check=True, capture_output=True, encoding='utf8').stdout.strip().split()
-        if words[0].lower() == 'julia' and words[1].lower() == 'version':
+        words = (
+            run([exe, "--version"], check=True, capture_output=True, encoding="utf8")
+            .stdout.strip()
+            .split()
+        )
+        if words[0].lower() == "julia" and words[1].lower() == "version":
             return Version(words[2])
     except:
         pass
+
 
 def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     """Find a Julia executable compatible with compat.
@@ -29,77 +35,88 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     if it is already installed then the user is already managing their own Julia versions.
     """
     bestcompat = None
-    if STATE['offline']:
+    if STATE["offline"]:
         upgrade = False
         install = False
     if upgrade:
         install = True
     # configured executable
-    ev_exe = STATE['override_executable']
+    ev_exe = STATE["override_executable"]
     if ev_exe:
         ev_ver = julia_version(ev_exe)
         if ev_ver is None:
-            raise Exception(f'juliapkg_exe={ev_exe} is not a Julia executable.')
+            raise Exception(f"juliapkg_exe={ev_exe} is not a Julia executable.")
         else:
             if compat is not None and ev_ver not in compat:
-                log(f'WARNING: juliapkg_exe={ev_exe} is Julia {ev_ver} but {compat} is required.')
+                log(
+                    f"WARNING: juliapkg_exe={ev_exe} is Julia {ev_ver} but {compat} is required."
+                )
             return (ev_exe, ev_ver)
     # first look in the prefix
     if prefix is not None:
-        ext = '.exe' if os.name == 'nt' else ''
-        pr_exe = shutil.which(os.path.join(prefix, 'bin', 'julia' + ext))
+        ext = ".exe" if os.name == "nt" else ""
+        pr_exe = shutil.which(os.path.join(prefix, "bin", "julia" + ext))
         pr_ver = julia_version(pr_exe)
         if pr_ver is not None:
             if compat is None or pr_ver in compat:
                 if upgrade and bestcompat is None:
-                    bestcompat = Compat.parse('=' + best_julia_version(compat)[0])
+                    bestcompat = Compat.parse("=" + best_julia_version(compat)[0])
                 if bestcompat is None or pr_ver in bestcompat:
                     return (pr_exe, pr_ver)
     # see if juliaup is installed
     try_jl = True
-    ju_exe = shutil.which('juliaup')
+    ju_exe = shutil.which("juliaup")
     if ju_exe:
-        ju_compat = Compat.parse('=' + ju_best_julia_version(compat)[0]) if upgrade else compat
+        ju_compat = (
+            Compat.parse("=" + ju_best_julia_version(compat)[0]) if upgrade else compat
+        )
         ans = ju_find_julia(ju_compat, install=install)
         if ans:
             return ans
         try_jl = install
     if try_jl:
         # see if julia is installed
-        jl_exe = shutil.which('julia')
+        jl_exe = shutil.which("julia")
         jl_ver = julia_version(jl_exe)
         if jl_ver is not None:
             if compat is None or jl_ver in compat:
                 return (jl_exe, jl_ver)
             else:
-                log(f'WARNING: You have Julia {jl_ver} installed but {compat} is required.')
-                log(f'  It is recommended that you upgrade Julia or install JuliaUp.')
+                log(
+                    f"WARNING: You have Julia {jl_ver} installed but {compat} is required."
+                )
+                log(f"  It is recommended that you upgrade Julia or install JuliaUp.")
     # install into the prefix
     if install and prefix is not None:
         if upgrade and bestcompat is None:
-            bestcompat = Compat.parse('=' + best_julia_version(compat)[0])
+            bestcompat = Compat.parse("=" + best_julia_version(compat)[0])
         ver, info = best_julia_version(bestcompat if upgrade else compat)
-        log(f'WARNING: About to install Julia {ver} to {prefix}.')
-        log(f'  If you use juliapkg in more than one environment, you are likely to have Julia')
-        log(f'  installed in multiple locations. It is recommended to install JuliaUp')
-        log(f'  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)')
-        log(f'  yourself.')
+        log(f"WARNING: About to install Julia {ver} to {prefix}.")
+        log(
+            f"  If you use juliapkg in more than one environment, you are likely to have Julia"
+        )
+        log(f"  installed in multiple locations. It is recommended to install JuliaUp")
+        log(
+            f"  (https://github.com/JuliaLang/juliaup) or Julia (https://julialang.org/downloads)"
+        )
+        log(f"  yourself.")
         install_julia(info, prefix)
-        pr_exe = shutil.which(os.path.join(prefix, 'bin', 'julia' + ext))
+        pr_exe = shutil.which(os.path.join(prefix, "bin", "julia" + ext))
         pr_ver = julia_version(pr_exe)
         assert pr_ver is not None
         assert compat is None or pr_ver in compat
         assert bestcompat is None or pr_ver in bestcompat
         return (pr_exe, pr_ver)
     # failed
-    compatstr = '' if compat is None else f' {compat}'
-    raise Exception(f'could not find Julia{compatstr}')
+    compatstr = "" if compat is None else f" {compat}"
+    raise Exception(f"could not find Julia{compatstr}")
+
 
 def ju_list_julia_versions(compat=None):
-    proc = run(['juliaup', 'list'], check=True, stdout=PIPE)
+    proc = run(["juliaup", "list"], check=True, stdout=PIPE)
     vers = {}
     arch = get_short_arch()
-    for line in proc.stdout.decode('utf-8').splitlines():
+    for line in proc.stdout.decode("utf-8").splitlines():
         words = line.strip().split()
         if len(words) == 2:
             c, v = words
@@ -113,15 +130,19 @@ def ju_list_julia_versions(compat=None):
                 continue
             ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch)
             if compat is None or ver in compat:
-                vers.setdefault(f'{ver.major}.{ver.minor}.{ver.patch}', []).append(c)
+                vers.setdefault(f"{ver.major}.{ver.minor}.{ver.patch}", []).append(c)
     return vers
+
 
 def ju_best_julia_version(compat=None):
     vers = ju_list_julia_versions(compat)
     if not vers:
-        raise Exception(f'no version of Julia is compatible with {compat} - perhaps you need to update JuliaUp')
+        raise Exception(
+            f"no version of Julia is compatible with {compat} - perhaps you need to update JuliaUp"
+        )
     v = sorted(vers.keys(), key=Version, reverse=True)[0]
     return v, vers[v]
+
 
 def ju_find_julia(compat=None, install=False):
     # see if it is already installed
@@ -131,44 +152,47 @@ def ju_find_julia(compat=None, install=False):
     # install it
     if install:
         ver, channels = ju_best_julia_version(compat)
-        log(f'Installing Julia {ver} using JuliaUp')
+        log(f"Installing Julia {ver} using JuliaUp")
         msgs = []
         for channel in channels:
-            proc = run(['juliaup', 'add', channel], stderr=PIPE)
+            proc = run(["juliaup", "add", channel], stderr=PIPE)
             if proc.returncode == 0:
                 msgs = []
                 break
             else:
-                msg = proc.stderr.decode('utf-8').strip()
+                msg = proc.stderr.decode("utf-8").strip()
                 if msg not in msgs:
                     msgs.append(msg)
         if msgs:
-            log(f'WARNING: Failed to install Julia {ver} using JuliaUp: {msgs}')
-        ans = ju_find_julia_noinstall(Compat.parse('=' + ver))
+            log(f"WARNING: Failed to install Julia {ver} using JuliaUp: {msgs}")
+        ans = ju_find_julia_noinstall(Compat.parse("=" + ver))
         if ans:
             return ans
-        Exception(f'JuliaUp just installed Julia {ver} but cannot find it')
+        Exception(f"JuliaUp just installed Julia {ver} but cannot find it")
+
 
 def ju_find_julia_noinstall(compat=None):
-    judir = os.path.join(STATE['depot'], 'juliaup')
-    metaname = os.path.join(judir, 'juliaup.json')
+    judir = os.path.join(STATE["depot"], "juliaup")
+    metaname = os.path.join(judir, "juliaup.json")
     arch = get_short_arch()
     if os.path.exists(metaname):
         with open(metaname) as fp:
             meta = json.load(fp)
         versions = []
-        for (verstr, info) in meta.get('InstalledVersions', {}).items():
-            ver = Version(verstr.replace('~', '.'))  # juliaup used to use VER~ARCH
+        for verstr, info in meta.get("InstalledVersions", {}).items():
+            ver = Version(verstr.replace("~", "."))  # juliaup used to use VER~ARCH
             if ver.prerelease or arch not in ver.build:
                 continue
             ver = Version(major=ver.major, minor=ver.minor, patch=ver.patch)
             if compat is None or ver in compat:
-                if 'Path' in info:
-                    ext = '.exe' if os.name == 'nt' else ''
-                    exe = os.path.abspath(os.path.join(judir, info['Path'], 'bin', 'julia'+ext))
+                if "Path" in info:
+                    ext = ".exe" if os.name == "nt" else ""
+                    exe = os.path.abspath(
+                        os.path.join(judir, info["Path"], "bin", "julia" + ext)
+                    )
                     versions.append((exe, ver))
         versions.sort(key=lambda x: x[1], reverse=True)
-        for (exe, _) in versions:
+        for exe, _ in versions:
             ver = julia_version(exe)
             if compat is None or ver in compat:
                 return (exe, ver)

@@ -1,7 +1,8 @@
 import re
 from semantic_version import Version
 
-_re_partial_version = re.compile(r'^([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$')
+_re_partial_version = re.compile(r"^([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$")
+
 
 def _parse_partial_version(x):
     m = _re_partial_version.match(x)
@@ -15,6 +16,7 @@ def _parse_partial_version(x):
     n = 1 if minor is None else 2 if patch is None else 3
     return (v, n)
 
+
 class Compat:
     """A Julia compat specifier."""
 
@@ -22,10 +24,10 @@ class Compat:
         self.clauses = [clause for clause in clauses if not clause.is_empty()]
 
     def __str__(self):
-        return ', '.join(str(clause) for clause in self.clauses)
+        return ", ".join(str(clause) for clause in self.clauses)
 
     def __repr__(self):
-        return f'{type(self).__name__}({self.clauses!r})'
+        return f"{type(self).__name__}({self.clauses!r})"
 
     def __contains__(self, v):
         return any(v in clause for clause in self.clauses)
@@ -41,7 +43,7 @@ class Compat:
 
     def __bool__(self):
         return bool(self.clauses)
-    
+
     def __eq__(self, other):
         return self.clauses == other.clauses
 
@@ -54,36 +56,55 @@ class Compat:
         """
         clauses = []
         if verstr.strip():
-            for part in verstr.split(','):
+            for part in verstr.split(","):
                 clause = Range.parse(part)
                 clauses.append(clause)
         return cls(clauses)
 
 
 class Range:
-
     def __init__(self, lo, hi):
         self.lo = lo if isinstance(lo, Version) else Version(lo)
         self.hi = hi if isinstance(hi, Version) else Version(hi)
-    
+
     @classmethod
     def tilde(cls, v, n):
-        lo = Version(major=v.major, minor=v.minor if n >= 2 else 0, patch=v.patch if n >= 3 else 0)
-        hi = v.next_major() if n < 2 else v.next_minor() if v.major != 0 or v.minor != 0 or n < 3 else v.next_patch()
+        lo = Version(
+            major=v.major,
+            minor=v.minor if n >= 2 else 0,
+            patch=v.patch if n >= 3 else 0,
+        )
+        hi = (
+            v.next_major()
+            if n < 2
+            else v.next_minor()
+            if v.major != 0 or v.minor != 0 or n < 3
+            else v.next_patch()
+        )
         return Range(lo, hi)
-    
+
     @classmethod
     def caret(cls, v, n):
-        lo = Version(major=v.major, minor=v.minor if n >= 2 else 0, patch=v.patch if n >= 3 else 0)
-        hi = v.next_major() if v.major != 0 or n < 2 else v.next_minor() if v.minor != 0 or n < 3 else v.next_patch()
+        lo = Version(
+            major=v.major,
+            minor=v.minor if n >= 2 else 0,
+            patch=v.patch if n >= 3 else 0,
+        )
+        hi = (
+            v.next_major()
+            if v.major != 0 or n < 2
+            else v.next_minor()
+            if v.minor != 0 or n < 3
+            else v.next_patch()
+        )
         return Range(lo, hi)
-    
+
     @classmethod
     def equality(cls, v):
         lo = v
         hi = v.next_patch()
         return Range(lo, hi)
-    
+
     @classmethod
     def hyphen(cls, v1, v2, n):
         lo = v1
@@ -115,38 +136,37 @@ class Range:
             v, n = _parse_partial_version(x[1:] if x.startswith("^") else x)
             if v is not None:
                 return cls.caret(v, n)
-        raise ValueError(f'invalid version specifier: {x}')
-
+        raise ValueError(f"invalid version specifier: {x}")
 
     def __str__(self):
         lo = self.lo
         hi = self.hi
         if self == Range.equality(lo):
-            return f'={lo.major}.{lo.minor}.{lo.patch}'
+            return f"={lo.major}.{lo.minor}.{lo.patch}"
         if self == Range.caret(lo, 1):
-            return f'^{lo.major}'
+            return f"^{lo.major}"
         if self == Range.caret(lo, 2):
-            return f'^{lo.major}.{lo.minor}'
+            return f"^{lo.major}.{lo.minor}"
         if self == Range.caret(lo, 3):
-            return f'^{lo.major}.{lo.minor}.{lo.patch}'
+            return f"^{lo.major}.{lo.minor}.{lo.patch}"
         if self == Range.tilde(lo, 1):
-            return f'~{lo.major}'
+            return f"~{lo.major}"
         if self == Range.tilde(lo, 2):
-            return f'~{lo.major}.{lo.minor}'
+            return f"~{lo.major}.{lo.minor}"
         if self == Range.tilde(lo, 3):
-            return f'~{lo.major}.{lo.minor}.{lo.patch}'
-        lostr = f'{lo.major}.{lo.minor}.{lo.patch}'
+            return f"~{lo.major}.{lo.minor}.{lo.patch}"
+        lostr = f"{lo.major}.{lo.minor}.{lo.patch}"
         if hi.major > 0 and hi.minor == 0 and hi.patch == 0:
-            return f'{lostr} - {hi.major-1}'
+            return f"{lostr} - {hi.major-1}"
         if hi.minor > 0 and hi.patch == 0:
-            return f'{lostr} - {hi.major}.{hi.minor-1}'
+            return f"{lostr} - {hi.major}.{hi.minor-1}"
         if hi.patch > 0:
-            return f'{lostr} - {hi.major}.{hi.minor}.{hi.patch-1}'
-        raise ValueError('invalid range')
+            return f"{lostr} - {hi.major}.{hi.minor}.{hi.patch-1}"
+        raise ValueError("invalid range")
 
     def __repr__(self):
-        return f'{type(self).__name__}({self.lo!r}, {self.hi!r})'
-    
+        return f"{type(self).__name__}({self.lo!r}, {self.hi!r})"
+
     def __contains__(self, v):
         return self.lo <= v < self.hi
 
@@ -154,9 +174,11 @@ class Range:
         lo = max(self.lo, other.lo)
         hi = min(self.hi, other.hi)
         return Range(lo, hi)
-    
+
     def __eq__(self, other):
-        return (self.lo == other.lo and self.hi == other.hi) or (self.is_empty() and other.is_empty())
-    
+        return (self.lo == other.lo and self.hi == other.hi) or (
+            self.is_empty() and other.is_empty()
+        )
+
     def is_empty(self):
         return not (self.lo < self.hi)
