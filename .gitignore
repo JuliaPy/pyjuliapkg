@@ -2,3 +2,6 @@
 __pycache__
 /dist
 /build
+.python-version
+requirements.lock
+requirements-dev.lock

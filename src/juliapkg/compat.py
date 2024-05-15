@@ -1,23 +1,31 @@
 import re
-import semantic_version as sv
+
+from semver import Version
+
+_re_partial_version = re.compile(r"^([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$")
 
 
-Version = sv.Version
+def _parse_partial_version(x):
+    m = _re_partial_version.match(x)
+    if m is None:
+        return None, None
+    major, minor, patch = m.groups()
+    v = Version(major, minor or 0, patch or 0)
+    n = 1 if minor is None else 2 if patch is None else 3
+    return (v, n)
 
 
 class Compat:
     """A Julia compat specifier."""
 
-    re_range = re.compile(r'^([~^])?([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$')
-
     def __init__(self, clauses=[]):
-        self.clauses = list(clauses)
+        self.clauses = [clause for clause in clauses if not clause.is_empty()]
 
     def __str__(self):
-        return ', '.join(str(clause) for clause in self.clauses)
+        return ", ".join(str(clause) for clause in self.clauses)
 
     def __repr__(self):
-        return f'{type(self).__name__}({self.clauses!r})'
+        return f"{type(self).__name__}({self.clauses!r})"
 
     def __contains__(self, v):
         return any(v in clause for clause in self.clauses)
@@ -27,12 +35,15 @@ class Compat:
         for clause1 in self.clauses:
             for clause2 in other.clauses:
                 clause = clause1 & clause2
-                if clause is not None:
+                if not clause.is_empty():
                     clauses.append(clause)
         return Compat(clauses)
 
     def __bool__(self):
         return bool(self.clauses)
+
+    def __eq__(self, other):
+        return self.clauses == other.clauses
 
     @classmethod
     def parse(cls, verstr):
@@ -43,129 +54,129 @@ class Compat:
         """
         clauses = []
         if verstr.strip():
-            for part in verstr.split(','):
-                part = part.strip()
-                m = cls.re_range.match(part)
-                if m is not None:
-                    prefix, major, minor, patch = m.groups()
-                    prefix = prefix or '^'
-                    assert prefix in ('^', '~')
-                    major = int(major)
-                    minor = None if minor is None else int(minor)
-                    patch = None if patch is None else int(patch)
-                    version = Version(major=major, minor=minor or 0, patch=patch or 0)
-                    if prefix == '^':
-                        if major != 0 or minor is None:
-                            nfixed = 1
-                        elif minor != 0 or patch is None:
-                            nfixed = 2
-                        else:
-                            nfixed = 3
-                    elif prefix == '~':
-                        if minor is None:
-                            nfixed = 1
-                        else:
-                            nfixed = 2
-                    clause = Range(version, nfixed)
-                elif part.startswith('='):
-                    version = Version(part[1:])
-                    clause = Eq(version)
-                else:
-                    raise ValueError(f'invalid version: {part!r}')
+            for part in verstr.split(","):
+                clause = Range.parse(part)
                 clauses.append(clause)
         return cls(clauses)
 
 
-class Eq:
-
-    def __init__(self, version):
-        self.version = version
-
-    def __str__(self):
-        return f'={self.version}'
-
-    def __repr__(self):
-        return f'{type(self).__name__}({self.version!r})'
-
-    def __contains__(self, v):
-        if isinstance(v, Version):
-            return v == self.version
-        return False
-
-    def __and__(self, other):
-        if self.version in other:
-            return self
-
-
 class Range:
+    def __init__(self, lo, hi):
+        self.lo = lo
+        self.hi = hi
 
-    def __init__(self, version, nfixed):
-        self.version = version
-        self.nfixed = nfixed
+    @classmethod
+    def tilde(cls, v, n):
+        lo = Version(
+            v.major,
+            v.minor if n >= 2 else 0,
+            v.patch if n >= 3 else 0,
+        )
+        hi = (
+            v.bump_major()
+            if n < 2
+            else v.bump_minor()
+            if v.major != 0 or v.minor != 0 or n < 3
+            else v.bump_patch()
+        )
+        return Range(lo, hi)
+
+    @classmethod
+    def caret(cls, v, n):
+        lo = Version(
+            v.major,
+            v.minor if n >= 2 else 0,
+            v.patch if n >= 3 else 0,
+        )
+        hi = (
+            v.bump_major()
+            if v.major != 0 or n < 2
+            else v.bump_minor()
+            if v.minor != 0 or n < 3
+            else v.bump_patch()
+        )
+        return Range(lo, hi)
+
+    @classmethod
+    def equality(cls, v):
+        lo = v
+        hi = v.bump_patch()
+        return Range(lo, hi)
+
+    @classmethod
+    def hyphen(cls, v1, v2, n):
+        lo = v1
+        hi = v2.bump_major() if n < 2 else v2.bump_minor() if n < 3 else v2.bump_patch()
+        return Range(lo, hi)
+
+    @classmethod
+    def parse(cls, x):
+        x = x.strip()
+        if x.startswith("~"):
+            # tilde specifier
+            v, n = _parse_partial_version(x[1:])
+            if v is not None:
+                return cls.tilde(v, n)
+        elif x.startswith("="):
+            # equality specifier
+            v, n = _parse_partial_version(x[1:])
+            if v is not None and n == 3:
+                return cls.equality(v)
+        elif " - " in x:
+            # range specifier
+            part1, part2 = x.split(" - ", 1)
+            v1, _ = _parse_partial_version(part1.strip())
+            v2, n = _parse_partial_version(part2.strip())
+            if v1 is not None and v2 is not None:
+                return cls.hyphen(v1, v2, n)
+        else:
+            # caret specifier
+            v, n = _parse_partial_version(x[1:] if x.startswith("^") else x)
+            if v is not None:
+                return cls.caret(v, n)
+        raise ValueError(f"invalid version specifier: {x}")
 
     def __str__(self):
-        v = self.version
-        n = self.nfixed
-        if n == 1:
-            if v.major != 0:
-                if v.patch != 0:
-                    return f'^{v.major}.{v.minor}.{v.patch}'
-                elif v.minor != 0:
-                    return f'^{v.major}.{v.minor}'
-                else:
-                    return f'^{v.major}'
-            elif v.minor == 0 and v.patch == 0:
-                return f'^0'
-            else:
-                assert False
-        elif n == 2:
-            if v.major == 0:
-                if v.minor == 0:
-                    if v.patch == 0:
-                        return f'~0.0'
-                    else:
-                        return f'~0.0.{v.patch}'
-                else:
-                    if v.patch == 0:
-                        return f'^0.{v.minor}'
-                    else:
-                        return f'^0.{v.minor}.{v.patch}'
-            else:
-                if v.patch == 0:
-                    return f'~{v.major}.{v.minor}'
-                else:
-                    return f'~{v.major}.{v.minor}.{v.patch}'
-        elif n == 3:
-            if v.major == 0 and v.minor == 0:
-                return f'^0.0.{v.patch}'
-            else:
-                assert False
-        else:
-            assert False
+        lo = self.lo
+        hi = self.hi
+        if self == Range.equality(lo):
+            return f"={lo.major}.{lo.minor}.{lo.patch}"
+        if self == Range.caret(lo, 1):
+            return f"^{lo.major}"
+        if self == Range.caret(lo, 2):
+            return f"^{lo.major}.{lo.minor}"
+        if self == Range.caret(lo, 3):
+            return f"^{lo.major}.{lo.minor}.{lo.patch}"
+        if self == Range.tilde(lo, 1):
+            return f"~{lo.major}"
+        if self == Range.tilde(lo, 2):
+            return f"~{lo.major}.{lo.minor}"
+        if self == Range.tilde(lo, 3):
+            return f"~{lo.major}.{lo.minor}.{lo.patch}"
+        lostr = f"{lo.major}.{lo.minor}.{lo.patch}"
+        if hi.major > 0 and hi.minor == 0 and hi.patch == 0:
+            return f"{lostr} - {hi.major-1}"
+        if hi.minor > 0 and hi.patch == 0:
+            return f"{lostr} - {hi.major}.{hi.minor-1}"
+        if hi.patch > 0:
+            return f"{lostr} - {hi.major}.{hi.minor}.{hi.patch-1}"
+        raise ValueError("invalid range")
 
     def __repr__(self):
-        return f'{type(self).__name__}({self.version!r}, {self.nfixed!r})'
+        return f"{type(self).__name__}({self.lo!r}, {self.hi!r})"
 
     def __contains__(self, v):
-        if isinstance(v, Version):
-            n = self.nfixed
-            v0 = self.version
-            return (n < 1 or v.major == v0.major) and (n < 2 or v.minor == v0.minor) and (n < 3 or v.patch == v0.patch) and v >= v0
+        return self.lo <= v < self.hi
 
     def __and__(self, other):
-        if isinstance(other, Range):
-            n0 = self.nfixed
-            v0 = self.version
-            n1 = other.nfixed
-            v1 = other.version
-            nmin = min(n0, n1)
-            nmax = max(n0, n1)
-            vmax = max(v0, v1)
-            if (nmin < 1 or v0.major == v1.major) and (nmin < 2 or v0.minor == v1.minor) and (nmin < 3 or v0.patch == v1.patch):
-                if vmax in self and vmax in other:
-                    return Range(vmax, nmax)
-        elif isinstance(other, Eq):
-            if other.version in self:
-                return other
-        else:
-            return NotImplemented
+        lo = max(self.lo, other.lo)
+        hi = min(self.hi, other.hi)
+        return Range(lo, hi)
+
+    def __eq__(self, other):
+        return (self.lo == other.lo and self.hi == other.hi) or (
+            self.is_empty() and other.is_empty()
+        )
+
+    def is_empty(self):
+        return not (self.lo < self.hi)
