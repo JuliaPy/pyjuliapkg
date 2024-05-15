@@ -30,6 +30,13 @@ def save_meta(meta):
     assert meta.get("meta_version") == META_VERSION
     fn = STATE["meta"]
     os.makedirs(os.path.dirname(fn), exist_ok=True)
+    if os.path.exists(fn):
+        with open(fn) as fp:
+            old_meta_json = fp.read()
+        meta_json = json.dumps(meta)
+        if meta_json == old_meta_json:
+            # No need to write out if nothing changed
+            return
     with open(fn, "w") as fp:
         json.dump(meta, fp)
 
