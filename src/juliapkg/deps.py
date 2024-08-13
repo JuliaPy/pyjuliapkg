@@ -162,7 +162,8 @@ def can_skip_resolve():
             return False
         if os.path.getmtime(filename) > fileinfo["timestamp"]:
             digest = _get_hash(filename)
-            if digest != fileinfo["hash_sha256"]:
+            current_digest = fileinfo.get("hash_sha256", "")
+            if digest != current_digest:
                 logger.debug("deps file has changed %r", filename)
                 return False
     return deps
