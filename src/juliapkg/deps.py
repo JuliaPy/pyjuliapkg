@@ -362,7 +362,10 @@ def resolve(force=False, dry_run=False):
             "version": str(ver),
             "executable": exe,
             "deps_files": {
-                filename: {"timestamp": os.path.getmtime(filename), "hash_sha256": _get_hash(filename)}
+                filename: {
+                    "timestamp": os.path.getmtime(filename),
+                    "hash_sha256": _get_hash(filename),
+                }
                 for filename in deps_files()
             },
             "pkgs": [pkg.dict() for pkg in pkgs],
