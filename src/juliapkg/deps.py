@@ -111,7 +111,7 @@ class PkgSpec:
 
 def _get_hash(filename):
     with open(filename, "rb") as f:
-        return hashlib.file_digest(f, "sha256").hexdigest()
+        return hashlib.sha256(f.read(), "sha256").hexdigest()
 
 
 def can_skip_resolve():
