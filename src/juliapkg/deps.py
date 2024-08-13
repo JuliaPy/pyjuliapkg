@@ -1,8 +1,8 @@
+import hashlib
 import json
 import logging
 import os
 import sys
-import hashlib
 from subprocess import run
 
 from .compat import Compat, Version
