@@ -59,7 +59,7 @@ Julia v1.*.* and the Example package v0.5.*:
 
 - `juliapkg.executable()` returns a compatible Julia executable.
 - `juliapkg.project()` returns the project into which the packages have been installed.
-- `juliapkg.resolve(force=False)` ensures all the depdencies are installed. You don't
+- `juliapkg.resolve(force=False)` ensures all the dependencies are installed. You don't
   normally need to do this because the other functions resolve automatically.
 
 ## Details
@@ -82,7 +82,7 @@ JuliaPkg tries the following strategies in order to find Julia on your system:
 - If the `-X juliapkg-exe` argument to `python` is set, that is used.
 - If the environment variable `PYTHON_JULIAPKG_EXE` is set, that is used.
 - If `julia` is in your `PATH`, and is compatible, that is used.
-- If `juliaup` is in your `PATH`, it is used to install a compatible version of Julia.
+- If [`juliaup`](https://github.com/JuliaLang/juliaup) is in your `PATH`, it is used to install a compatible version of Julia.
 - Otherwise, JuliaPkg downloads a compatible version of Julia and installs it into the
   Julia project.
 
