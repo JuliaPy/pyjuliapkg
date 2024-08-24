@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -108,6 +109,11 @@ class PkgSpec:
         return ans
 
 
+def _get_hash(filename):
+    with open(filename, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
 def can_skip_resolve():
     # resolve if we haven't resolved before
     deps = load_meta()
@@ -155,8 +161,11 @@ def can_skip_resolve():
             logger.debug("deps file no longer exists %r", filename)
             return False
         if os.path.getmtime(filename) > fileinfo["timestamp"]:
-            logger.debug("deps file has changed %r", filename)
-            return False
+            digest = _get_hash(filename)
+            current_digest = fileinfo.get("hash_sha256", "")
+            if digest != current_digest:
+                logger.debug("deps file has changed %r", filename)
+                return False
     return deps
 
 
@@ -353,7 +362,10 @@ def resolve(force=False, dry_run=False):
             "version": str(ver),
             "executable": exe,
             "deps_files": {
-                filename: {"timestamp": os.path.getmtime(filename)}
+                filename: {
+                    "timestamp": os.path.getmtime(filename),
+                    "hash_sha256": _get_hash(filename),
+                }
                 for filename in deps_files()
             },
             "pkgs": [pkg.dict() for pkg in pkgs],
