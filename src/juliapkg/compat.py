@@ -2,16 +2,26 @@ import re
 
 from semver import Version
 
-_re_partial_version = re.compile(r"^([0-9]+)(?:\.([0-9]+)(?:\.([0-9]+))?)?$")
+_re_digits_g = "[0-9]+"
+
+
+def _re_group(inner="", numeric=True, delimiter="."):
+    capture = _re_digits_g if numeric else ".*"
+    return f"(?:{delimiter}({capture}){inner})?"
+
+
+_re_prerelease = _re_group(numeric=False)
+_re_optional = _re_group(_re_group(_re_prerelease))
+_re_partial_version = re.compile(rf"^({_re_digits_g}){_re_optional}$")
 
 
 def _parse_partial_version(x):
     m = _re_partial_version.match(x)
     if m is None:
         return None, None
-    major, minor, patch = m.groups()
-    v = Version(major, minor or 0, patch or 0)
-    n = 1 if minor is None else 2 if patch is None else 3
+    major, minor, patch, prerelease = m.groups()
+    v = Version(major, minor or 0, patch or 0, prerelease)
+    n = 1 if minor is None else 2 if patch is None else 3 if prerelease is None else 4
     return (v, n)
 
 
@@ -87,6 +97,7 @@ class Range:
             v.major,
             v.minor if n >= 2 else 0,
             v.patch if n >= 3 else 0,
+            v.prerelease if n >= 4 else None,
         )
         hi = (
             v.bump_major()
@@ -94,13 +105,18 @@ class Range:
             else v.bump_minor()
             if v.minor != 0 or n < 3
             else v.bump_patch()
+            if v.patch != 0 or n < 4
+            else v.bump_prerelease()
         )
         return Range(lo, hi)
 
     @classmethod
     def equality(cls, v):
         lo = v
-        hi = v.bump_patch()
+        if lo.prerelease is not None:
+            hi = v.bump_prerelease()
+        else:
+            hi = v.bump_patch()
         return Range(lo, hi)
 
     @classmethod
@@ -120,7 +136,7 @@ class Range:
         elif x.startswith("="):
             # equality specifier
             v, n = _parse_partial_version(x[1:])
-            if v is not None and n == 3:
+            if v is not None and n >= 3:
                 return cls.equality(v)
         elif " - " in x:
             # range specifier
@@ -140,26 +156,40 @@ class Range:
         lo = self.lo
         hi = self.hi
         if self == Range.equality(lo):
-            return f"={lo.major}.{lo.minor}.{lo.patch}"
+            prerelease = f"-{lo.prerelease}" if lo.prerelease else ""
+            return f"={lo.major}.{lo.minor}.{lo.patch}{prerelease}"
         if self == Range.caret(lo, 1):
             return f"^{lo.major}"
         if self == Range.caret(lo, 2):
             return f"^{lo.major}.{lo.minor}"
         if self == Range.caret(lo, 3):
             return f"^{lo.major}.{lo.minor}.{lo.patch}"
+        if self == Range.caret(lo, 4):
+            return f"^{lo.major}.{lo.minor}.{lo.patch}-{lo.prerelease}"
         if self == Range.tilde(lo, 1):
             return f"~{lo.major}"
         if self == Range.tilde(lo, 2):
             return f"~{lo.major}.{lo.minor}"
         if self == Range.tilde(lo, 3):
             return f"~{lo.major}.{lo.minor}.{lo.patch}"
-        lostr = f"{lo.major}.{lo.minor}.{lo.patch}"
+        if self == Range.tilde(lo, 4):
+            return f"~{lo.major}.{lo.minor}.{lo.patch}-{lo.prerelease}"
+        if lo.prerelease is None:
+            lostr = f"{lo.major}.{lo.minor}.{lo.patch}"
+        else:
+            lostr = f"{lo.major}.{lo.minor}.{lo.patch}-{lo.prerelease}"
+        hi_str = ""
         if hi.major > 0 and hi.minor == 0 and hi.patch == 0:
             return f"{lostr} - {hi.major - 1}"
+        hi_str += f"{hi.major}"
         if hi.minor > 0 and hi.patch == 0:
-            return f"{lostr} - {hi.major}.{hi.minor - 1}"
-        if hi.patch > 0:
-            return f"{lostr} - {hi.major}.{hi.minor}.{hi.patch - 1}"
+            return f"{lostr} - {hi_str}.{hi.minor - 1}"
+        hi_str += f".{hi.minor}"
+        if hi.patch > 0 and hi.prerelease is None:
+            return f"{lostr} - {hi_str}.{hi.patch - 1}"
+        hi_str += f".{hi.patch}"
+        if hi.prerelease is not None:
+            return f"{lostr} - {hi_str}-{self._decrease_string(hi.prerelease)}"
         raise ValueError("invalid range")
 
     def __repr__(self):
@@ -180,3 +210,11 @@ class Range:
 
     def is_empty(self):
         return not (self.lo < self.hi)
+
+    def _decrease_string(self, string):
+        match = Version._LAST_NUMBER.search(string)
+        if match:
+            prev_ = str(int(match.group(1)) - 1)
+            start, end = match.span(1)
+            string = string[: max(end - len(prev_), start)] + prev_ + string[end:]
+        return string
