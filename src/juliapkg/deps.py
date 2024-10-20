@@ -14,7 +14,7 @@ logger = logging.getLogger("juliapkg")
 
 ### META
 
-META_VERSION = 4  # increment whenever the format changes
+META_VERSION = 5  # increment whenever the format changes
 
 
 def load_meta():
@@ -161,9 +161,7 @@ def can_skip_resolve():
             logger.debug("deps file no longer exists %r", filename)
             return False
         if os.path.getmtime(filename) > fileinfo["timestamp"]:
-            digest = _get_hash(filename)
-            current_digest = fileinfo.get("hash_sha256", "")
-            if digest != current_digest:
+            if _get_hash(filename) != fileinfo["hash_sha256"]:
                 logger.debug("deps file has changed %r", filename)
                 return False
     return deps
