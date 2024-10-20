@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.14 (2024-10-20)
+* When testing if a file has changed, now checks the actual content in addition to the
+  modification time.
+
 ## v0.1.13 (2024-05-12)
 * Internal changes.
 
