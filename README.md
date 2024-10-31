@@ -73,7 +73,7 @@ option to `python`. The `-X` option has higher precedence.
 | Environment Variable | `-X` Option | Description |
 | --- | --- | --- |
 | `PYTHON_JULIAPKG_EXE=<exe>` | `-X juliapkg-exe=<exe>` | The Julia executable to use. |
-| `PYTHON_JULIAPKG_PROJECT=<project>` | `-X juliapkg-project=<project>` | The Julia project where pacakges are installed. |
+| `PYTHON_JULIAPKG_PROJECT=<project>` | `-X juliapkg-project=<project>` | The Julia project where packages are installed. |
 | `PYTHON_JULIAPKG_OFFLINE=<yes/no>` | `-X juliapkg-offline=<yes/no>` | Work in Offline Mode - does not install Julia or any packages. |
 
 ### Which Julia gets used?
