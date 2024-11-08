@@ -5,3 +5,4 @@ __pycache__
 .python-version
 requirements.lock
 requirements-dev.lock
+uv.lock
