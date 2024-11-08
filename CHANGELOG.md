@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.15 (2024-11-08)
+* Bug fixes.
+
 ## v0.1.14 (2024-10-20)
 * When testing if a file has changed, now checks the actual content in addition to the
   modification time.
