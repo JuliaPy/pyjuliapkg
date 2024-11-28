@@ -18,6 +18,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         pyversion: ["3.x", "3.8"]
+    env:
+      JULIA_DEPOT_PATH: ${{ github.workspace }}/julia_depot
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.pyversion }}
@@ -35,8 +37,7 @@ jobs:
           ruff check
       - name: Test with pytest
         run: |
-          export JULIA_DEPOT_PATH=$PWD/julia_depot
-          pytest --cov=src test
+          pytest -s --cov=src test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         env:
