@@ -176,9 +176,7 @@ def ju_find_julia_noinstall(compat=None):
     # own env var for overriding ~/.julia
     ju_depot_path = os.getenv("JULIAUP_DEPOT_PATH")
     if not ju_depot_path:
-        ju_depot_path = os.path.abspath(
-            os.path.join(os.path.expanduser("~"), ".julia")
-        )
+        ju_depot_path = os.path.abspath(os.path.join(os.path.expanduser("~"), ".julia"))
     judir = os.path.join(ju_depot_path, "juliaup")
     metaname = os.path.join(judir, "juliaup.json")
     arch = get_short_arch()
