@@ -35,6 +35,7 @@ jobs:
           ruff check
       - name: Test with pytest
         run: |
+          export JULIA_DEPOT_PATH=$PWD/julia_depot
           pytest --cov=src test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
