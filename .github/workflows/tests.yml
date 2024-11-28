@@ -35,6 +35,11 @@ jobs:
         run: |
           ruff format --check
           ruff check
+      - name: Install juliaup (Linux and macOS only)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          curl -fsSL https://install.julialang.org | sh -s -- yes
       - name: Test with pytest
         run: |
           pytest -s --cov=src test
