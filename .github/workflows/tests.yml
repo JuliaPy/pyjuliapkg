@@ -39,7 +39,7 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          curl -fsSL https://install.julialang.org | sh -s -- yes
+          curl -fsSL https://install.julialang.org | sh -s -- -y
       - name: Test with pytest
         run: |
           pytest -s --cov=src test
