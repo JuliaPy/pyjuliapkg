@@ -40,6 +40,7 @@ jobs:
         shell: bash
         run: |
           curl -fsSL https://install.julialang.org | sh -s -- -y
+          export PATH=/home/runner/.juliaup/bin:$PATH
       - name: Test with pytest
         run: |
           pytest -s --cov=src test
