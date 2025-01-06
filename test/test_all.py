@@ -9,6 +9,7 @@ from multiprocessing import Pool
 
 def test_import():
     import juliapkg
+
     juliapkg.status
     juliapkg.add
     juliapkg.rm
@@ -21,8 +22,13 @@ def test_import():
 def test_resolve():
     assert juliapkg.resolve() is True
 
+
 def resolve_in_tempdir(tempdir):
-    subprocess.run(["python", "-c", f"import juliapkg; juliapkg.resolve()"], env=dict(os.environ, PYTHON_JULIAPKG_PROJECT=tempdir))
+    subprocess.run(
+        ["python", "-c", f"import juliapkg; juliapkg.resolve()"],
+        env=dict(os.environ, PYTHON_JULIAPKG_PROJECT=tempdir),
+    )
+
 
 def test_resolve_contention():
     with tempfile.TemporaryDirectory() as tempdir:
@@ -37,9 +43,9 @@ def test_resolve_contention():
 }
 }
 }
-"""
-            )
+""")
         Pool(5).map(resolve_in_tempdir, [tempdir] * 5)
+
 
 def test_status():
     assert juliapkg.status() is None

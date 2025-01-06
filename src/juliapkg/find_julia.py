@@ -71,7 +71,9 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         ju_exe = shutil.which("juliaup")
         if ju_exe:
             ju_compat = (
-                Compat.parse("=" + ju_best_julia_version(compat)[0]) if upgrade else compat
+                Compat.parse("=" + ju_best_julia_version(compat)[0])
+                if upgrade
+                else compat
             )
             ans = ju_find_julia(ju_compat, install=install)
             if ans:
@@ -89,7 +91,9 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
                         f"WARNING: You have Julia {jl_ver} installed but {compat} is"
                         " required."
                     )
-                    log("  It is recommended that you upgrade Julia or install JuliaUp.")
+                    log(
+                        "  It is recommended that you upgrade Julia or install JuliaUp."
+                    )
         # install into the prefix
         if install and prefix is not None:
             if upgrade and bestcompat is None:

@@ -349,7 +349,13 @@ def resolve(force=False, dry_run=False):
                 #   Julia is being called from Python
                 env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
             run(
-                [exe, "--project=" + project, "--startup-file=no", "-e", "; ".join(script)],
+                [
+                    exe,
+                    "--project=" + project,
+                    "--startup-file=no",
+                    "-e",
+                    "; ".join(script),
+                ],
                 check=True,
                 env=env,
             )

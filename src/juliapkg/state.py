@@ -4,7 +4,9 @@ from threading import RLock
 from filelock import FileLock
 
 thread_lock = RLock()
-process_lock = FileLock(os.path.join(os.path.dirname(os.path.realpath(__file__)), "lock.pid"))
+process_lock = FileLock(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "lock.pid")
+)
 
 STATE = {}
 
@@ -98,5 +100,6 @@ def reset_state():
 
     # resolution
     STATE["resolved"] = False
+
 
 reset_state()
