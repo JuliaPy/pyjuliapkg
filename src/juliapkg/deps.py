@@ -8,7 +8,7 @@ from subprocess import run
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log
-from .state import STATE
+from .state import STATE, thread_lock, process_lock
 
 logger = logging.getLogger("juliapkg")
 
@@ -287,104 +287,107 @@ def find_requirements():
 
 
 def resolve(force=False, dry_run=False):
-    # see if we can skip resolving
-    if not force:
-        if STATE["resolved"]:
-            return True
-        deps = can_skip_resolve()
-        if deps:
-            STATE["resolved"] = True
-            STATE["executable"] = deps["executable"]
-            STATE["version"] = Version.parse(deps["version"])
-            return True
-    if dry_run:
-        return False
-    STATE["resolved"] = False
-    # get julia compat and required packages
-    compat, pkgs = find_requirements()
-    # find a compatible julia executable
-    log(f'Locating Julia{"" if compat is None else " "+str(compat)}')
-    exe, ver = find_julia(
-        compat=compat, prefix=STATE["install"], install=True, upgrade=True
-    )
-    log(f"Using Julia {ver} at {exe}")
-    # set up the project
-    project = STATE["project"]
-    log(f"Using Julia project at {project}")
-    os.makedirs(project, exist_ok=True)
-    if not STATE["offline"]:
-        # write a Project.toml specifying UUIDs and compatibility of required packages
-        with open(os.path.join(project, "Project.toml"), "wt") as fp:
-            print("[deps]", file=fp)
-            for pkg in pkgs:
-                print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
-            print(file=fp)
-            print("[compat]", file=fp)
-            for pkg in pkgs:
-                if pkg.version:
-                    print(f'{pkg.name} = "{pkg.version}"', file=fp)
-            print(file=fp)
-        # remove Manifest.toml
-        manifest_path = os.path.join(project, "Manifest.toml")
-        if os.path.exists(manifest_path):
-            os.remove(manifest_path)
-        # install the packages
-        dev_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if pkg.dev])
-        add_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
-        script = ["import Pkg", "Pkg.Registry.update()"]
-        if dev_pkgs:
-            script.append(f"Pkg.develop([{dev_pkgs}])")
-        if add_pkgs:
-            script.append(f"Pkg.add([{add_pkgs}])")
-        script.append("Pkg.resolve()")
-        script.append("Pkg.precompile()")
-        log("Installing packages:")
-        for line in script:
-            log("julia>", line, cont=True)
-        env = os.environ.copy()
-        if sys.executable:
-            # prefer PythonCall to use the current Python executable
-            # TODO: this is a hack, it would be better for PythonCall to detect that
-            #   Julia is being called from Python
-            env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
-        run(
-            [exe, "--project=" + project, "--startup-file=no", "-e", "; ".join(script)],
-            check=True,
-            env=env,
+    with thread_lock, process_lock:
+        # see if we can skip resolving
+        if not force:
+            if STATE["resolved"]:
+                return True
+            deps = can_skip_resolve()
+            if deps:
+                STATE["resolved"] = True
+                STATE["executable"] = deps["executable"]
+                STATE["version"] = Version.parse(deps["version"])
+                return True
+        if dry_run:
+            return False
+        STATE["resolved"] = False
+        # get julia compat and required packages
+        compat, pkgs = find_requirements()
+        # find a compatible julia executable
+        log(f'Locating Julia{"" if compat is None else " "+str(compat)}')
+        exe, ver = find_julia(
+            compat=compat, prefix=STATE["install"], install=True, upgrade=True
         )
-    # record that we resolved
-    save_meta(
-        {
-            "meta_version": META_VERSION,
-            "dev": STATE["dev"],
-            "version": str(ver),
-            "executable": exe,
-            "deps_files": {
-                filename: {
-                    "timestamp": os.path.getmtime(filename),
-                    "hash_sha256": _get_hash(filename),
-                }
-                for filename in deps_files()
-            },
-            "pkgs": [pkg.dict() for pkg in pkgs],
-            "offline": bool(STATE["offline"]),
-            "override_executable": STATE["override_executable"],
-        }
-    )
-    STATE["resolved"] = True
-    STATE["executable"] = exe
-    STATE["version"] = ver
-    return True
+        log(f"Using Julia {ver} at {exe}")
+        # set up the project
+        project = STATE["project"]
+        log(f"Using Julia project at {project}")
+        os.makedirs(project, exist_ok=True)
+        if not STATE["offline"]:
+            # write a Project.toml specifying UUIDs and compatibility of required packages
+            with open(os.path.join(project, "Project.toml"), "wt") as fp:
+                print("[deps]", file=fp)
+                for pkg in pkgs:
+                    print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
+                print(file=fp)
+                print("[compat]", file=fp)
+                for pkg in pkgs:
+                    if pkg.version:
+                        print(f'{pkg.name} = "{pkg.version}"', file=fp)
+                print(file=fp)
+            # remove Manifest.toml
+            manifest_path = os.path.join(project, "Manifest.toml")
+            if os.path.exists(manifest_path):
+                os.remove(manifest_path)
+            # install the packages
+            dev_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if pkg.dev])
+            add_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
+            script = ["import Pkg", "Pkg.Registry.update()"]
+            if dev_pkgs:
+                script.append(f"Pkg.develop([{dev_pkgs}])")
+            if add_pkgs:
+                script.append(f"Pkg.add([{add_pkgs}])")
+            script.append("Pkg.resolve()")
+            script.append("Pkg.precompile()")
+            log("Installing packages:")
+            for line in script:
+                log("julia>", line, cont=True)
+            env = os.environ.copy()
+            if sys.executable:
+                # prefer PythonCall to use the current Python executable
+                # TODO: this is a hack, it would be better for PythonCall to detect that
+                #   Julia is being called from Python
+                env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
+            run(
+                [exe, "--project=" + project, "--startup-file=no", "-e", "; ".join(script)],
+                check=True,
+                env=env,
+            )
+        # record that we resolved
+        save_meta(
+            {
+                "meta_version": META_VERSION,
+                "dev": STATE["dev"],
+                "version": str(ver),
+                "executable": exe,
+                "deps_files": {
+                    filename: {
+                        "timestamp": os.path.getmtime(filename),
+                        "hash_sha256": _get_hash(filename),
+                    }
+                    for filename in deps_files()
+                },
+                "pkgs": [pkg.dict() for pkg in pkgs],
+                "offline": bool(STATE["offline"]),
+                "override_executable": STATE["override_executable"],
+            }
+        )
+        STATE["resolved"] = True
+        STATE["executable"] = exe
+        STATE["version"] = ver
+        return True
 
 
 def executable():
-    resolve()
-    return STATE["executable"]
+    with thread_lock, process_lock:
+        resolve()
+        return STATE["executable"]
 
 
 def project():
-    resolve()
-    return STATE["project"]
+    with thread_lock, process_lock:
+        resolve()
+        return STATE["project"]
 
 
 def cur_deps_file(target=None):
@@ -425,58 +428,61 @@ def write_cur_deps(deps, target=None):
 
 
 def status(target=None):
-    res = resolve(dry_run=True)
-    print("JuliaPkg Status")
-    fn = cur_deps_file(target=target)
-    if os.path.exists(fn):
-        with open(fn) as fp:
-            deps = json.load(fp)
-    else:
-        deps = {}
-    st = "" if deps else " (empty project)"
-    print(f"{fn}{st}")
-    if res:
-        exe = STATE["executable"]
-        ver = STATE["version"]
-    else:
-        print("Not resolved (resolve for more information)")
-    jl = deps.get("julia")
-    if res or jl:
-        print("Julia", end="")
+    with thread_lock, process_lock:
+        res = resolve(dry_run=True)
+        print("JuliaPkg Status")
+        fn = cur_deps_file(target=target)
+        if os.path.exists(fn):
+            with open(fn) as fp:
+                deps = json.load(fp)
+        else:
+            deps = {}
+        st = "" if deps else " (empty project)"
+        print(f"{fn}{st}")
         if res:
-            print(f" {ver}", end="")
-        if jl:
-            print(f" ({jl})", end="")
-        if res:
-            print(f" @ {exe}", end="")
-        print()
-    pkgs = deps.get("packages")
-    if pkgs:
-        print("Packages:")
-        for name, info in pkgs.items():
-            print(f"  {name}: {info}")
+            exe = STATE["executable"]
+            ver = STATE["version"]
+        else:
+            print("Not resolved (resolve for more information)")
+        jl = deps.get("julia")
+        if res or jl:
+            print("Julia", end="")
+            if res:
+                print(f" {ver}", end="")
+            if jl:
+                print(f" ({jl})", end="")
+            if res:
+                print(f" @ {exe}", end="")
+            print()
+        pkgs = deps.get("packages")
+        if pkgs:
+            print("Packages:")
+            for name, info in pkgs.items():
+                print(f"  {name}: {info}")
 
 
 def require_julia(compat, target=None):
-    deps = load_cur_deps(target=target)
-    if compat is None:
-        if "julia" in deps:
-            del deps["julia"]
-    else:
-        if isinstance(compat, str):
-            compat = Compat.parse(compat)
-        elif not isinstance(compat, Compat):
-            raise TypeError
-        deps["julia"] = str(compat)
-    write_cur_deps(deps, target=target)
-    STATE["resolved"] = False
+    with thread_lock, process_lock:
+        deps = load_cur_deps(target=target)
+        if compat is None:
+            if "julia" in deps:
+                del deps["julia"]
+        else:
+            if isinstance(compat, str):
+                compat = Compat.parse(compat)
+            elif not isinstance(compat, Compat):
+                raise TypeError
+            deps["julia"] = str(compat)
+        write_cur_deps(deps, target=target)
+        STATE["resolved"] = False
 
 
 def add(pkg, *args, target=None, **kwargs):
-    deps = load_cur_deps(target=target)
-    _add(deps, pkg, *args, **kwargs)
-    write_cur_deps(deps, target=target)
-    STATE["resolved"] = False
+    with thread_lock, process_lock:
+        deps = load_cur_deps(target=target)
+        _add(deps, pkg, *args, **kwargs)
+        write_cur_deps(deps, target=target)
+        STATE["resolved"] = False
 
 
 def _add(deps, pkg, uuid=None, **kwargs):
@@ -494,10 +500,11 @@ def _add(deps, pkg, uuid=None, **kwargs):
 
 
 def rm(pkg, target=None):
-    deps = load_cur_deps(target=target)
-    _rm(deps, pkg)
-    write_cur_deps(deps, target=target)
-    STATE["resolved"] = False
+    with thread_lock, process_lock:
+        deps = load_cur_deps(target=target)
+        _rm(deps, pkg)
+        write_cur_deps(deps, target=target)
+        STATE["resolved"] = False
 
 
 def _rm(deps, pkg):
