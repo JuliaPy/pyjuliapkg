@@ -1,13 +1,13 @@
 from .deps import (
-                   PkgSpec,
-                   add,
-                   executable,
-                   offline,
-                   project,
-                   require_julia,
-                   resolve,
-                   rm,
-                   status,
+    PkgSpec,
+    add,
+    executable,
+    offline,
+    project,
+    require_julia,
+    resolve,
+    rm,
+    status,
 )
 
 __all__ = [
