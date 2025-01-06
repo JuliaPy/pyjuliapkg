@@ -8,7 +8,7 @@ from subprocess import run
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log
-from .state import STATE, thread_lock, process_lock
+from .state import STATE, process_lock, thread_lock
 
 logger = logging.getLogger("juliapkg")
 
@@ -314,7 +314,8 @@ def resolve(force=False, dry_run=False):
         log(f"Using Julia project at {project}")
         os.makedirs(project, exist_ok=True)
         if not STATE["offline"]:
-            # write a Project.toml specifying UUIDs and compatibility of required packages
+            # write a Project.toml specifying UUIDs and compatibility of required
+            # packages
             with open(os.path.join(project, "Project.toml"), "wt") as fp:
                 print("[deps]", file=fp)
                 for pkg in pkgs:

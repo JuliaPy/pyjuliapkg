@@ -5,7 +5,7 @@ from subprocess import PIPE, run
 
 from .compat import Compat, Version
 from .install_julia import best_julia_version, get_short_arch, install_julia, log
-from .state import STATE, thread_lock, process_lock
+from .state import STATE, process_lock, thread_lock
 
 
 def julia_version(exe):
@@ -51,8 +51,8 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
             else:
                 if compat is not None and ev_ver not in compat:
                     log(
-                        f"WARNING: juliapkg_exe={ev_exe} is Julia {ev_ver} but {compat} is"
-                        " required."
+                        f"WARNING: juliapkg_exe={ev_exe} is Julia {ev_ver} but {compat}"
+                        "is required."
                     )
                 return (ev_exe, ev_ver)
         # first look in the prefix

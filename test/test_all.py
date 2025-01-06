@@ -1,10 +1,10 @@
 import json
 import os
+import subprocess
 import tempfile
+from multiprocessing import Pool
 
 import juliapkg
-import subprocess
-from multiprocessing import Pool
 
 
 def test_import():
@@ -25,7 +25,7 @@ def test_resolve():
 
 def resolve_in_tempdir(tempdir):
     subprocess.run(
-        ["python", "-c", f"import juliapkg; juliapkg.resolve()"],
+        ["python", "-c", "import juliapkg; juliapkg.resolve()"],
         env=dict(os.environ, PYTHON_JULIAPKG_PROJECT=tempdir),
     )
 
