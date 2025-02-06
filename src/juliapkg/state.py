@@ -1,10 +1,5 @@
 import os
 import sys
-from filelock import FileLock
-
-process_lock = FileLock(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "lock.pid")
-)
 
 STATE = {}
 

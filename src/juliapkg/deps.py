@@ -4,11 +4,12 @@ import logging
 import os
 import sys
 from subprocess import run
+from filelock import FileLock
 
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log
-from .state import STATE, process_lock
+from .state import STATE
 
 logger = logging.getLogger("juliapkg")
 
@@ -287,11 +288,12 @@ def find_requirements():
 
 
 def resolve(force=False, dry_run=False):
-    with process_lock:
+    lock_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lock.pid")
+    with FileLock(lock_file):
         # see if we can skip resolving
         if not force:
             if STATE["resolved"]:
-                return True
+                return False
             deps = can_skip_resolve()
             if deps:
                 STATE["resolved"] = True
