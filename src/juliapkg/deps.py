@@ -288,21 +288,23 @@ def find_requirements():
 
 
 def resolve(force=False, dry_run=False):
-    lock_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lock.pid")
-    with FileLock(lock_file):
-        # see if we can skip resolving
-        if not force:
-            if STATE["resolved"]:
-                return False
-            deps = can_skip_resolve()
-            if deps:
-                STATE["resolved"] = True
-                STATE["executable"] = deps["executable"]
-                STATE["version"] = Version.parse(deps["version"])
-                return True
-        if dry_run:
+    # see if we can skip resolving
+    if not force:
+        if STATE["resolved"]:
             return False
-        STATE["resolved"] = False
+        deps = can_skip_resolve()
+        if deps:
+            STATE["resolved"] = True
+            STATE["executable"] = deps["executable"]
+            STATE["version"] = Version.parse(deps["version"])
+            return True
+    if dry_run:
+        return False
+    STATE["resolved"] = False
+    project = STATE["project"]
+    os.makedirs(project, exist_ok=True)
+    lock = FileLock(os.path.join(project, "lock.pid"))
+    with lock:
         # get julia compat and required packages
         compat, pkgs = find_requirements()
         # find a compatible julia executable
@@ -312,9 +314,7 @@ def resolve(force=False, dry_run=False):
         )
         log(f"Using Julia {ver} at {exe}")
         # set up the project
-        project = STATE["project"]
         log(f"Using Julia project at {project}")
-        os.makedirs(project, exist_ok=True)
         if not STATE["offline"]:
             # write a Project.toml specifying UUIDs and compatibility of required
             # packages
