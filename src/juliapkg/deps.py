@@ -386,15 +386,13 @@ def resolve(force=False, dry_run=False):
 
 
 def executable():
-    with process_lock:
-        resolve()
-        return STATE["executable"]
+    resolve()
+    return STATE["executable"]
 
 
 def project():
-    with process_lock:
-        resolve()
-        return STATE["project"]
+    resolve()
+    return STATE["project"]
 
 
 def cur_deps_file(target=None):
@@ -435,61 +433,58 @@ def write_cur_deps(deps, target=None):
 
 
 def status(target=None):
-    with process_lock:
-        res = resolve(dry_run=True)
-        print("JuliaPkg Status")
-        fn = cur_deps_file(target=target)
-        if os.path.exists(fn):
-            with open(fn) as fp:
-                deps = json.load(fp)
-        else:
-            deps = {}
-        st = "" if deps else " (empty project)"
-        print(f"{fn}{st}")
+    res = resolve(dry_run=True)
+    print("JuliaPkg Status")
+    fn = cur_deps_file(target=target)
+    if os.path.exists(fn):
+        with open(fn) as fp:
+            deps = json.load(fp)
+    else:
+        deps = {}
+    st = "" if deps else " (empty project)"
+    print(f"{fn}{st}")
+    if res:
+        exe = STATE["executable"]
+        ver = STATE["version"]
+    else:
+        print("Not resolved (resolve for more information)")
+    jl = deps.get("julia")
+    if res or jl:
+        print("Julia", end="")
         if res:
-            exe = STATE["executable"]
-            ver = STATE["version"]
-        else:
-            print("Not resolved (resolve for more information)")
-        jl = deps.get("julia")
-        if res or jl:
-            print("Julia", end="")
-            if res:
-                print(f" {ver}", end="")
-            if jl:
-                print(f" ({jl})", end="")
-            if res:
-                print(f" @ {exe}", end="")
-            print()
-        pkgs = deps.get("packages")
-        if pkgs:
-            print("Packages:")
-            for name, info in pkgs.items():
-                print(f"  {name}: {info}")
+            print(f" {ver}", end="")
+        if jl:
+            print(f" ({jl})", end="")
+        if res:
+            print(f" @ {exe}", end="")
+        print()
+    pkgs = deps.get("packages")
+    if pkgs:
+        print("Packages:")
+        for name, info in pkgs.items():
+            print(f"  {name}: {info}")
 
 
 def require_julia(compat, target=None):
-    with process_lock:
-        deps = load_cur_deps(target=target)
-        if compat is None:
-            if "julia" in deps:
-                del deps["julia"]
-        else:
-            if isinstance(compat, str):
-                compat = Compat.parse(compat)
-            elif not isinstance(compat, Compat):
-                raise TypeError
-            deps["julia"] = str(compat)
-        write_cur_deps(deps, target=target)
-        STATE["resolved"] = False
+    deps = load_cur_deps(target=target)
+    if compat is None:
+        if "julia" in deps:
+            del deps["julia"]
+    else:
+        if isinstance(compat, str):
+            compat = Compat.parse(compat)
+        elif not isinstance(compat, Compat):
+            raise TypeError
+        deps["julia"] = str(compat)
+    write_cur_deps(deps, target=target)
+    STATE["resolved"] = False
 
 
 def add(pkg, *args, target=None, **kwargs):
-    with process_lock:
-        deps = load_cur_deps(target=target)
-        _add(deps, pkg, *args, **kwargs)
-        write_cur_deps(deps, target=target)
-        STATE["resolved"] = False
+    deps = load_cur_deps(target=target)
+    _add(deps, pkg, *args, **kwargs)
+    write_cur_deps(deps, target=target)
+    STATE["resolved"] = False
 
 
 def _add(deps, pkg, uuid=None, **kwargs):
@@ -507,11 +502,10 @@ def _add(deps, pkg, uuid=None, **kwargs):
 
 
 def rm(pkg, target=None):
-    with process_lock:
-        deps = load_cur_deps(target=target)
-        _rm(deps, pkg)
-        write_cur_deps(deps, target=target)
-        STATE["resolved"] = False
+    deps = load_cur_deps(target=target)
+    _rm(deps, pkg)
+    write_cur_deps(deps, target=target)
+    STATE["resolved"] = False
 
 
 def _rm(deps, pkg):
