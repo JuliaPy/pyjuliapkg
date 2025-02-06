@@ -5,7 +5,7 @@ from subprocess import PIPE, run
 
 from .compat import Compat, Version
 from .install_julia import best_julia_version, get_short_arch, install_julia, log
-from .state import STATE, process_lock, thread_lock
+from .state import STATE, process_lock
 
 
 def julia_version(exe):
@@ -35,7 +35,7 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
     because if it is already installed then the user is already managing their own Julia
     versions.
     """
-    with thread_lock, process_lock:
+    with process_lock:
         bestcompat = None
         if STATE["offline"]:
             upgrade = False

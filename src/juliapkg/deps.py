@@ -8,7 +8,7 @@ from subprocess import run
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log
-from .state import STATE, process_lock, thread_lock
+from .state import STATE, process_lock
 
 logger = logging.getLogger("juliapkg")
 
@@ -287,7 +287,7 @@ def find_requirements():
 
 
 def resolve(force=False, dry_run=False):
-    with thread_lock, process_lock:
+    with process_lock:
         # see if we can skip resolving
         if not force:
             if STATE["resolved"]:
@@ -304,7 +304,7 @@ def resolve(force=False, dry_run=False):
         # get julia compat and required packages
         compat, pkgs = find_requirements()
         # find a compatible julia executable
-        log(f'Locating Julia{"" if compat is None else " "+str(compat)}')
+        log(f"Locating Julia{'' if compat is None else ' ' + str(compat)}")
         exe, ver = find_julia(
             compat=compat, prefix=STATE["install"], install=True, upgrade=True
         )
@@ -386,13 +386,13 @@ def resolve(force=False, dry_run=False):
 
 
 def executable():
-    with thread_lock, process_lock:
+    with process_lock:
         resolve()
         return STATE["executable"]
 
 
 def project():
-    with thread_lock, process_lock:
+    with process_lock:
         resolve()
         return STATE["project"]
 
@@ -435,7 +435,7 @@ def write_cur_deps(deps, target=None):
 
 
 def status(target=None):
-    with thread_lock, process_lock:
+    with process_lock:
         res = resolve(dry_run=True)
         print("JuliaPkg Status")
         fn = cur_deps_file(target=target)
@@ -469,7 +469,7 @@ def status(target=None):
 
 
 def require_julia(compat, target=None):
-    with thread_lock, process_lock:
+    with process_lock:
         deps = load_cur_deps(target=target)
         if compat is None:
             if "julia" in deps:
@@ -485,7 +485,7 @@ def require_julia(compat, target=None):
 
 
 def add(pkg, *args, target=None, **kwargs):
-    with thread_lock, process_lock:
+    with process_lock:
         deps = load_cur_deps(target=target)
         _add(deps, pkg, *args, **kwargs)
         write_cur_deps(deps, target=target)
@@ -507,7 +507,7 @@ def _add(deps, pkg, uuid=None, **kwargs):
 
 
 def rm(pkg, target=None):
-    with thread_lock, process_lock:
+    with process_lock:
         deps = load_cur_deps(target=target)
         _rm(deps, pkg)
         write_cur_deps(deps, target=target)
