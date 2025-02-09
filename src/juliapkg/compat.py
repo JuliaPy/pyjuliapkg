@@ -155,11 +155,11 @@ class Range:
             return f"~{lo.major}.{lo.minor}.{lo.patch}"
         lostr = f"{lo.major}.{lo.minor}.{lo.patch}"
         if hi.major > 0 and hi.minor == 0 and hi.patch == 0:
-            return f"{lostr} - {hi.major-1}"
+            return f"{lostr} - {hi.major - 1}"
         if hi.minor > 0 and hi.patch == 0:
-            return f"{lostr} - {hi.major}.{hi.minor-1}"
+            return f"{lostr} - {hi.major}.{hi.minor - 1}"
         if hi.patch > 0:
-            return f"{lostr} - {hi.major}.{hi.minor}.{hi.patch-1}"
+            return f"{lostr} - {hi.major}.{hi.minor}.{hi.patch - 1}"
         raise ValueError("invalid range")
 
     def __repr__(self):

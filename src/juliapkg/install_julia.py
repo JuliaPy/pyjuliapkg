@@ -173,8 +173,8 @@ def download_julia(f):
             buf.write(data)
             if time.time() > t:
                 log(
-                    f"  downloaded {buf.tell()/(1<<20):.1f} MB of {size/(1<<20):.1f}"
-                    " MB",
+                    f"  downloaded {buf.tell() / (1 << 20):.1f} MB of"
+                    f" {size / (1 << 20):.1f} MB",
                     cont=True,
                 )
                 t = time.time() + freq

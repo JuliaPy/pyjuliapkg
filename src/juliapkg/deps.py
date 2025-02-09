@@ -5,6 +5,8 @@ import os
 import sys
 from subprocess import run
 
+from filelock import FileLock
+
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log
@@ -287,94 +289,117 @@ def find_requirements():
 
 
 def resolve(force=False, dry_run=False):
-    # see if we can skip resolving
-    if not force:
-        if STATE["resolved"]:
-            return True
-        deps = can_skip_resolve()
-        if deps:
-            STATE["resolved"] = True
-            STATE["executable"] = deps["executable"]
-            STATE["version"] = Version.parse(deps["version"])
-            return True
-    if dry_run:
+    # fast check to see if we have already resolved
+    if (not force) and STATE["resolved"]:
         return False
     STATE["resolved"] = False
-    # get julia compat and required packages
-    compat, pkgs = find_requirements()
-    # find a compatible julia executable
-    log(f'Locating Julia{"" if compat is None else " "+str(compat)}')
-    exe, ver = find_julia(
-        compat=compat, prefix=STATE["install"], install=True, upgrade=True
-    )
-    log(f"Using Julia {ver} at {exe}")
-    # set up the project
+    # use a lock to prevent concurrent resolution
     project = STATE["project"]
-    log(f"Using Julia project at {project}")
     os.makedirs(project, exist_ok=True)
-    if not STATE["offline"]:
-        # write a Project.toml specifying UUIDs and compatibility of required packages
-        with open(os.path.join(project, "Project.toml"), "wt") as fp:
-            print("[deps]", file=fp)
-            for pkg in pkgs:
-                print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
-            print(file=fp)
-            print("[compat]", file=fp)
-            for pkg in pkgs:
-                if pkg.version:
-                    print(f'{pkg.name} = "{pkg.version}"', file=fp)
-            print(file=fp)
-        # remove Manifest.toml
-        manifest_path = os.path.join(project, "Manifest.toml")
-        if os.path.exists(manifest_path):
-            os.remove(manifest_path)
-        # install the packages
-        dev_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if pkg.dev])
-        add_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
-        script = ["import Pkg", "Pkg.Registry.update()"]
-        if dev_pkgs:
-            script.append(f"Pkg.develop([{dev_pkgs}])")
-        if add_pkgs:
-            script.append(f"Pkg.add([{add_pkgs}])")
-        script.append("Pkg.resolve()")
-        script.append("Pkg.precompile()")
-        log("Installing packages:")
-        for line in script:
-            log("julia>", line, cont=True)
-        env = os.environ.copy()
-        if sys.executable:
-            # prefer PythonCall to use the current Python executable
-            # TODO: this is a hack, it would be better for PythonCall to detect that
-            #   Julia is being called from Python
-            env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
-        run(
-            [exe, "--project=" + project, "--startup-file=no", "-e", "; ".join(script)],
-            check=True,
-            env=env,
+    lock_file = os.path.join(project, "lock.pid")
+    lock = FileLock(lock_file)
+    try:
+        lock.acquire(timeout=3)
+    except TimeoutError:
+        log(
+            f"Waiting for lock on {lock_file} to be freed. This normally means that"
+            " another process is resolving. If you know that no other process is"
+            " resolving, delete this file to proceed."
         )
-    # record that we resolved
-    save_meta(
-        {
-            "meta_version": META_VERSION,
-            "dev": STATE["dev"],
-            "version": str(ver),
-            "executable": exe,
-            "deps_files": {
-                filename: {
-                    "timestamp": os.path.getmtime(filename),
-                    "hash_sha256": _get_hash(filename),
-                }
-                for filename in deps_files()
-            },
-            "pkgs": [pkg.dict() for pkg in pkgs],
-            "offline": bool(STATE["offline"]),
-            "override_executable": STATE["override_executable"],
-        }
-    )
-    STATE["resolved"] = True
-    STATE["executable"] = exe
-    STATE["version"] = ver
-    return True
+        lock.acquire()
+    try:
+        # see if we can skip resolving
+        if not force:
+            deps = can_skip_resolve()
+            if deps:
+                STATE["resolved"] = True
+                STATE["executable"] = deps["executable"]
+                STATE["version"] = Version.parse(deps["version"])
+                return True
+        if dry_run:
+            return False
+        # get julia compat and required packages
+        compat, pkgs = find_requirements()
+        # find a compatible julia executable
+        log(f"Locating Julia{'' if compat is None else ' ' + str(compat)}")
+        exe, ver = find_julia(
+            compat=compat, prefix=STATE["install"], install=True, upgrade=True
+        )
+        log(f"Using Julia {ver} at {exe}")
+        # set up the project
+        log(f"Using Julia project at {project}")
+        if not STATE["offline"]:
+            # write a Project.toml specifying UUIDs and compatibility of required
+            # packages
+            with open(os.path.join(project, "Project.toml"), "wt") as fp:
+                print("[deps]", file=fp)
+                for pkg in pkgs:
+                    print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
+                print(file=fp)
+                print("[compat]", file=fp)
+                for pkg in pkgs:
+                    if pkg.version:
+                        print(f'{pkg.name} = "{pkg.version}"', file=fp)
+                print(file=fp)
+            # remove Manifest.toml
+            manifest_path = os.path.join(project, "Manifest.toml")
+            if os.path.exists(manifest_path):
+                os.remove(manifest_path)
+            # install the packages
+            dev_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if pkg.dev])
+            add_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
+            script = ["import Pkg", "Pkg.Registry.update()"]
+            if dev_pkgs:
+                script.append(f"Pkg.develop([{dev_pkgs}])")
+            if add_pkgs:
+                script.append(f"Pkg.add([{add_pkgs}])")
+            script.append("Pkg.resolve()")
+            script.append("Pkg.precompile()")
+            log("Installing packages:")
+            for line in script:
+                log("julia>", line, cont=True)
+            env = os.environ.copy()
+            if sys.executable:
+                # prefer PythonCall to use the current Python executable
+                # TODO: this is a hack, it would be better for PythonCall to detect that
+                #   Julia is being called from Python
+                env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
+            run(
+                [
+                    exe,
+                    "--project=" + project,
+                    "--startup-file=no",
+                    "-e",
+                    "; ".join(script),
+                ],
+                check=True,
+                env=env,
+            )
+        # record that we resolved
+        save_meta(
+            {
+                "meta_version": META_VERSION,
+                "dev": STATE["dev"],
+                "version": str(ver),
+                "executable": exe,
+                "deps_files": {
+                    filename: {
+                        "timestamp": os.path.getmtime(filename),
+                        "hash_sha256": _get_hash(filename),
+                    }
+                    for filename in deps_files()
+                },
+                "pkgs": [pkg.dict() for pkg in pkgs],
+                "offline": bool(STATE["offline"]),
+                "override_executable": STATE["override_executable"],
+            }
+        )
+        STATE["resolved"] = True
+        STATE["executable"] = exe
+        STATE["version"] = ver
+        return True
+    finally:
+        lock.release()
 
 
 def executable():

@@ -1,6 +1,8 @@
 import json
 import os
+import subprocess
 import tempfile
+from multiprocessing import Pool
 
 import juliapkg
 
@@ -19,6 +21,30 @@ def test_import():
 
 def test_resolve():
     assert juliapkg.resolve() is True
+
+
+def resolve_in_tempdir(tempdir):
+    subprocess.run(
+        ["python", "-c", "import juliapkg; juliapkg.resolve()"],
+        env=dict(os.environ, PYTHON_JULIAPKG_PROJECT=tempdir),
+    )
+
+
+def test_resolve_contention():
+    with tempfile.TemporaryDirectory() as tempdir:
+        with open(os.path.join(tempdir, "juliapkg.json"), "w") as f:
+            f.write("""
+{
+"julia": "1",
+"packages": {
+"BenchmarkTools": {
+    "uuid": "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf",
+    "version": "1.5"
+}
+}
+}
+""")
+        Pool(5).map(resolve_in_tempdir, [tempdir] * 5)
 
 
 def test_status():
