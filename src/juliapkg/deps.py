@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from subprocess import run
+
 from filelock import FileLock
 
 from .compat import Compat, Version
