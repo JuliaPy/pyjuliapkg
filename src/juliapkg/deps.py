@@ -288,23 +288,35 @@ def find_requirements():
 
 
 def resolve(force=False, dry_run=False):
-    # see if we can skip resolving
-    if not force:
-        if STATE["resolved"]:
-            return False
-        deps = can_skip_resolve()
-        if deps:
-            STATE["resolved"] = True
-            STATE["executable"] = deps["executable"]
-            STATE["version"] = Version.parse(deps["version"])
-            return True
-    if dry_run:
+    # fast check to see if we have already resolved
+    if (not force) and STATE["resolved"]:
         return False
     STATE["resolved"] = False
+    # use a lock to prevent concurrent resolution
     project = STATE["project"]
     os.makedirs(project, exist_ok=True)
-    lock = FileLock(os.path.join(project, "lock.pid"))
-    with lock:
+    lock_file = os.path.join(project, "lock.pid")
+    lock = FileLock(lock_file)
+    try:
+        lock.acquire(timeout=3)
+    except TimeoutError:
+        log(
+            f"Waiting for lock on {lock_file} to be freed. This normally means that"
+            " another process is resolving. If you know that no other process is"
+            " resolving, delete this file to proceed."
+        )
+        lock.acquire()
+    try:
+        # see if we can skip resolving
+        if not force:
+            deps = can_skip_resolve()
+            if deps:
+                STATE["resolved"] = True
+                STATE["executable"] = deps["executable"]
+                STATE["version"] = Version.parse(deps["version"])
+                return True
+        if dry_run:
+            return False
         # get julia compat and required packages
         compat, pkgs = find_requirements()
         # find a compatible julia executable
@@ -385,6 +397,8 @@ def resolve(force=False, dry_run=False):
         STATE["executable"] = exe
         STATE["version"] = ver
         return True
+    finally:
+        lock.release()
 
 
 def executable():
