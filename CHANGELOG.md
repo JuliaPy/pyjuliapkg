@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Support for `juliapkg.toml` files.
+
 ## v0.1.15 (2024-11-08)
 * Bug fixes.
 
