@@ -4,6 +4,8 @@ import subprocess
 import tempfile
 from multiprocessing import Pool
 
+import tomli
+
 import juliapkg
 
 
@@ -74,14 +76,21 @@ def test_add_rm():
     with tempfile.TemporaryDirectory() as tdir:
 
         def deps():
-            fn = os.path.join(tdir, "juliapkg.json")
-            if not os.path.exists(fn):
-                return None
-            with open(os.path.join(tdir, "juliapkg.json")) as fp:
-                return json.load(fp)
+            # Try both TOML and JSON files
+            toml_fn = os.path.join(tdir, "juliapkg.toml")
+            json_fn = os.path.join(tdir, "juliapkg.json")
+
+            if os.path.exists(toml_fn):
+                with open(toml_fn, "rb") as fp:
+                    return tomli.load(fp)
+            elif os.path.exists(json_fn):
+                with open(json_fn) as fp:
+                    return json.load(fp)
+            return None
 
         assert deps() is None
 
+        # Test adding with default TOML
         juliapkg.add(
             "Example1",
             target=tdir,
@@ -89,6 +98,7 @@ def test_add_rm():
         )
 
         assert deps() == {"packages": {"Example1": {"uuid": "0001"}}}
+        assert os.path.exists(os.path.join(tdir, "juliapkg.toml"))
 
         juliapkg.add("Example2", target=tdir, uuid="0002")
 
@@ -112,3 +122,30 @@ def test_add_rm():
         juliapkg.rm("Example1", target=tdir)
 
         assert deps() == {"packages": {"Example2": {"uuid": "0002"}}}
+
+        # Verify JSON wasn't created
+        assert not os.path.exists(os.path.join(tdir, "juliapkg.json"))
+
+
+def test_json_fallback():
+    with tempfile.TemporaryDirectory() as tdir:
+        # Create a JSON file first
+        json_fn = os.path.join(tdir, "juliapkg.json")
+        with open(json_fn, "w") as fp:
+            json.dump({"packages": {"Example1": {"uuid": "0001"}}}, fp)
+
+        # Load should read from JSON
+        deps = juliapkg.deps.load_cur_deps(target=tdir)
+        assert deps == {"packages": {"Example1": {"uuid": "0001"}}}
+
+        # Add should write to JSON since it exists
+        juliapkg.add("Example2", target=tdir, uuid="0002")
+
+        with open(json_fn) as fp:
+            deps = json.load(fp)
+        assert deps == {
+            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}}
+        }
+
+        # Verify TOML wasn't created
+        assert not os.path.exists(os.path.join(tdir, "juliapkg.toml"))
