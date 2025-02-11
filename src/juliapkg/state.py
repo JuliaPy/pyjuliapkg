@@ -84,7 +84,6 @@ def reset_state():
 
     # meta file
     STATE["prefix"] = os.path.join(STATE["project"], "pyjuliapkg")
-    STATE["deps"] = os.path.join(STATE["prefix"], "juliapkg.json")
     STATE["meta"] = os.path.join(STATE["prefix"], "meta.json")
     STATE["install"] = os.path.join(STATE["prefix"], "install")
 

@@ -6,7 +6,7 @@
 
 Do you want to use [Julia](https://julialang.org/) in your Python script/project/package?
 No problem! JuliaPkg will help you out!
-- Declare the version of Julia you require in a `juliapkg.json` file.
+- Declare the version of Julia you require in a `juliapkg.toml` file.
 - Add any packages you need too.
 - Call `juliapkg.resolve()` et voila, your dependencies are there.
 - Use `juliapkg.executable()` to find the Julia executable and `juliapkg.project()` to
@@ -32,17 +32,27 @@ pip install juliapkg
   adds a required package. Its name and UUID are required.
 - `rm(pkg, target=None)` remove a package.
 
-Note that these functions edit `juliapkg.json` but do not actually install anything until
+Note that these functions edit `juliapkg.toml` but do not actually install anything until
 `resolve()` is called, which happens automatically in `executable()` and `project()`.
 
-The `target` specifies the `juliapkg.json` file to edit, or the directory containing it.
+The `target` specifies the `juliapkg.toml` file to edit, or the directory containing it.
 If not given, it will be your virtual environment or Conda environment if you are using one,
-otherwise `~/.pyjuliapkg.json`.
+otherwise `~/.julia/environments/pyjuliapkg/juliapkg.toml`.
 
-### juliapkg.json
+### Dependency file format
 
-You can also edit `juliapkg.json` directly if you like. Here is an example which requires
+You can also edit `juliapkg.toml` directly if you like. Here is an example which requires
 Julia v1.*.* and the Example package v0.5.*:
+
+```toml
+julia = "1"
+[packages.Example]
+uuid = "7876af07-990d-54b4-ab0e-23690620f79a"
+version = "0.5"
+```
+
+For backward compatibility, JSON format is also supported using `juliapkg.json` files with the same structure:
+
 ```json
 {
     "julia": "1",
@@ -54,6 +64,8 @@ Julia v1.*.* and the Example package v0.5.*:
     }
 }
 ```
+
+When both TOML and JSON files exist in the same directory, the TOML file takes precedence.
 
 ## Using Julia
 
@@ -102,11 +114,11 @@ More strategies may be added in a future release.
 
 ### Adding Julia dependencies to Python packages
 
-JuliaPkg looks for `juliapkg.json` files in many locations, namely:
+JuliaPkg looks for dependency files (`juliapkg.toml` or `juliapkg.json`) in many locations, namely:
 - `{project}/pyjuliapkg` where project is as above (depending on your environment).
 - Every directory and direct sub-directory in `sys.path`.
 
-The last point means that if you put a `juliapkg.json` file in a package, then install that
+The last point means that if you put a `juliapkg.toml` or `juliapkg.json` file in a package, then install that
 package, then JuliaPkg will find those dependencies and install them.
 
 You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the

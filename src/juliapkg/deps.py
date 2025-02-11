@@ -5,6 +5,8 @@ import os
 import sys
 from subprocess import run
 
+import tomli
+import tomli_w
 from filelock import FileLock
 
 from .compat import Compat, Version
@@ -17,6 +19,9 @@ logger = logging.getLogger("juliapkg")
 ### META
 
 META_VERSION = 5  # increment whenever the format changes
+
+# Allowed dependency filenames in order of preference
+ALLOWED_DEPS_FILES = ["juliapkg.toml", "juliapkg.json"]
 
 
 def load_meta():
@@ -179,11 +184,14 @@ def deps_files():
             path = os.getcwd()
         if not os.path.isdir(path):
             continue
-        fn = os.path.join(path, "juliapkg.json")
-        ans.append(fn)
-        for subdir in os.listdir(path):
-            fn = os.path.join(path, subdir, "juliapkg.json")
+        # Look for all allowed filenames
+        for filename in ALLOWED_DEPS_FILES:
+            fn = os.path.join(path, filename)
             ans.append(fn)
+        for subdir in os.listdir(path):
+            for filename in ALLOWED_DEPS_FILES:
+                fn = os.path.join(path, subdir, filename)
+                ans.append(fn)
     return list(
         set(
             os.path.normcase(os.path.normpath(os.path.abspath(fn)))
@@ -193,17 +201,63 @@ def deps_files():
     )
 
 
+def _load_deps(file_path):
+    basename = os.path.basename(file_path)
+    if basename not in ALLOWED_DEPS_FILES:
+        raise ValueError(
+            f"Dependency file must be one of {ALLOWED_DEPS_FILES}, got: {file_path}"
+        )
+    if basename == "juliapkg.toml":
+        with open(file_path, "rb") as fp:
+            return tomli.load(fp)
+    elif basename == "juliapkg.json":
+        with open(file_path) as fp:
+            return json.load(fp)
+    else:
+        assert False
+
+
+def _write_deps(deps, file_path):
+    basename = os.path.basename(file_path)
+    if basename not in ALLOWED_DEPS_FILES:
+        raise ValueError(
+            f"Dependency file must be one of {ALLOWED_DEPS_FILES}, got: {file_path}"
+        )
+    if basename == "juliapkg.toml":
+        with open(file_path, "wb") as fp:
+            tomli_w.dump(deps, fp)
+    elif basename == "juliapkg.json":
+        with open(file_path, "w") as fp:
+            json.dump(deps, fp)
+    else:
+        assert False
+
+
+def load_cur_deps(target=None):
+    fn = cur_deps_file(target=target)
+    if os.path.exists(fn):
+        return _load_deps(fn)
+    return {}
+
+
+def write_cur_deps(deps, target=None):
+    fn = cur_deps_file(target=target)
+    if deps:
+        os.makedirs(os.path.dirname(fn), exist_ok=True)
+        _write_deps(deps, fn)
+    else:
+        if os.path.exists(fn):
+            os.remove(fn)
+
+
 def find_requirements():
     # read all dependencies into a dict: name -> key -> file -> value
     # read all julia compats into a dict: file -> compat
-    import json
-
     compats = {}
     all_deps = {}
     for fn in deps_files():
         log("Found dependencies: {}".format(fn))
-        with open(fn) as fp:
-            deps = json.load(fp)
+        deps = _load_deps(fn)
         for name, kvs in deps.get("packages", {}).items():
             dep = all_deps.setdefault(name, {})
             for k, v in kvs.items():
@@ -413,10 +467,16 @@ def project():
 
 
 def cur_deps_file(target=None):
-    if target is None:
-        return STATE["deps"]
-    elif os.path.isdir(target):
-        return os.path.abspath(os.path.join(target, "juliapkg.json"))
+    if target is None or os.path.isdir(target):
+        # Default to first allowed file if no file exists
+        paths = [
+            os.path.join(STATE["prefix"] if target is None else target, f)
+            for f in ALLOWED_DEPS_FILES
+        ]
+        for path in paths:
+            if os.path.exists(path):
+                return path
+        return paths[0]  # Default to highest priority
     elif os.path.isfile(target) or (
         os.path.isdir(os.path.dirname(target)) and not os.path.exists(target)
     ):
@@ -428,34 +488,12 @@ def cur_deps_file(target=None):
         )
 
 
-def load_cur_deps(target=None):
-    fn = cur_deps_file(target=target)
-    if os.path.exists(fn):
-        with open(fn) as fp:
-            deps = json.load(fp)
-    else:
-        deps = {}
-    return deps
-
-
-def write_cur_deps(deps, target=None):
-    fn = cur_deps_file(target=target)
-    if deps:
-        os.makedirs(os.path.dirname(fn), exist_ok=True)
-        with open(fn, "w") as fp:
-            json.dump(deps, fp)
-    else:
-        if os.path.exists(fn):
-            os.remove(fn)
-
-
 def status(target=None):
     res = resolve(dry_run=True)
     print("JuliaPkg Status")
     fn = cur_deps_file(target=target)
     if os.path.exists(fn):
-        with open(fn) as fp:
-            deps = json.load(fp)
+        deps = _load_deps(fn)
     else:
         deps = {}
     st = "" if deps else " (empty project)"
