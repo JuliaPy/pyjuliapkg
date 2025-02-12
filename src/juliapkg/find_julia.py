@@ -196,5 +196,7 @@ def ju_find_julia_noinstall(compat=None):
         versions.sort(key=lambda x: x[1], reverse=True)
         for exe, _ in versions:
             ver = julia_version(exe)
+            if ver is None:
+                raise Exception(f'WARNING: Failed to execute {exe} --version')
             if compat is None or ver in compat:
                 return (exe, ver)
