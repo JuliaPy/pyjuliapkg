@@ -1,6 +1,6 @@
 [project]
 name = "juliapkg"
-version = "0.1.15"
+version = "0.1.16"
 description = "Julia version manager and package manager"
 authors = [{ name = "Christopher Doris" }]
 dependencies = ["semver >=3.0,<4.0", "filelock >=3.16,<4.0"]

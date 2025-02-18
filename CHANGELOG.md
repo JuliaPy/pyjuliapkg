@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.16 (2025-02-18)
+* Adds file-locking to protect multiple concurrent resolves.
+
 ## v0.1.15 (2024-11-08)
 * Bug fixes.
 
