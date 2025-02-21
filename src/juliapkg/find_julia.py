@@ -201,5 +201,9 @@ def ju_find_julia_noinstall(compat=None):
         versions.sort(key=lambda x: x[1], reverse=True)
         for exe, _ in versions:
             ver = julia_version(exe)
+            if ver is None:
+                raise Exception(
+                    f"{exe} (installed by juliaup) is not a valid Julia executable"
+                )
             if compat is None or ver in compat:
                 return (exe, ver)
