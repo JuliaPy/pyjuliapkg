@@ -18,8 +18,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         pyversion: ["3.x", "3.8"]
-    env:
-      JULIA_DEPOT_PATH: ${{ github.workspace }}/julia_depot
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.pyversion }}
@@ -35,15 +33,9 @@ jobs:
         run: |
           ruff format --check
           ruff check
-      - name: Install juliaup (Linux and macOS only)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          curl -fsSL https://install.julialang.org | sh -s -- -y
-          export PATH=/home/runner/.juliaup/bin:$PATH
       - name: Test with pytest
         run: |
-          pytest -s --cov=src test
+          pytest --cov=src test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         env:
