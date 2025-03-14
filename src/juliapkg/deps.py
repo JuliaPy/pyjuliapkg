@@ -172,8 +172,9 @@ def can_skip_resolve():
 
 
 def _find_editable_deps_files(path):
-    # The editable .pth files appear to follow a pattern `__editable.<pkg_name>-<pkg_version>.pth`.
-    editable_pth_files = glob.glob('__editable__.*.pth', root_dir=path)
+    # The editable .pth files appear to follow a pattern
+    # `__editable.<pkg_name>-<pkg_version>.pth`.
+    editable_pth_files = glob.glob("__editable__.*.pth", root_dir=path)
     ans = []
     for editable_pth_file in editable_pth_files:
         # Extract the package name from the pth file name.
@@ -215,7 +216,7 @@ def deps_files():
             ans.append(fn)
 
         ans += _find_editable_deps_files(path)
-        
+
     return list(
         set(
             os.path.normcase(os.path.normpath(os.path.abspath(fn)))
