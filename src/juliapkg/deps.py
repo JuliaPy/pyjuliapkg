@@ -178,7 +178,8 @@ def _find_editable_deps_files(path):
     ans = []
     for editable_pth_file in editable_pth_files:
         # Extract the package name from the pth file name.
-        m = re.match("__editable__\\.(.*)-", editable_pth_file)
+        bname = os.path.basename(editable_pth_file)
+        m = re.match("__editable__\\.(.*)-", bname)
         if m:
             pkg_name = m.group(1)
             # Use the import finders to find the location of the editable package.
