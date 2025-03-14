@@ -1,7 +1,9 @@
+import glob
 import hashlib
 import json
 import logging
 import os
+import re
 import sys
 from subprocess import run
 
@@ -169,6 +171,33 @@ def can_skip_resolve():
     return deps
 
 
+def _find_editable_deps_files(path):
+    # The editable .pth files appear to follow a pattern `__editable.<pkg_name>-<pkg_version>.pth`.
+    editable_pth_files = glob.glob('__editable__.*.pth', root_dir=path)
+    ans = []
+    for editable_pth_file in editable_pth_files:
+        # Extract the package name from the pth file name.
+        m = re.match("__editable__\\.(.*)-", editable_pth_file)
+        if m:
+            pkg_name = m.group(1)
+            # Use the import finders to find the location of the editable package.
+            for finder in sys.meta_path:
+                module_spec = finder.find_spec(pkg_name)
+                if module_spec:
+                    for search_loc in module_spec.submodule_search_locations:
+                        fn = os.path.join(search_loc, "juliapkg.json")
+                        ans.append(fn)
+                        # Thought about adding subdirectories, but that would
+                        # match possible `test` directories that might have
+                        # test-specific dependencies that wouldn't be
+                        # wanted/needed.
+                        # for subdir in os.listdir(search_loc):
+                        #     fn = os.path.join(search_loc, subdir, "juliapkg.json")
+                        #     ans.append(fn)
+
+    return ans
+
+
 def deps_files():
     ans = []
     # the default deps file
@@ -184,6 +213,9 @@ def deps_files():
         for subdir in os.listdir(path):
             fn = os.path.join(path, subdir, "juliapkg.json")
             ans.append(fn)
+
+        ans += _find_editable_deps_files(path)
+        
     return list(
         set(
             os.path.normcase(os.path.normpath(os.path.abspath(fn)))
