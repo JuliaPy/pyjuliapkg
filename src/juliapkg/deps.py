@@ -184,7 +184,10 @@ def _find_editable_deps_files(path):
             pkg_name = m.group(1)
             # Use the import finders to find the location of the editable package.
             for finder in sys.meta_path:
-                module_spec = finder.find_spec(pkg_name)
+                try:
+                    module_spec = finder.find_spec(pkg_name)
+                except TypeError:
+                    continue
                 if module_spec:
                     for search_loc in module_spec.submodule_search_locations:
                         fn = os.path.join(search_loc, "juliapkg.json")
