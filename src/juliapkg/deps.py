@@ -193,6 +193,16 @@ def deps_files():
     )
 
 
+def openssl_compat():
+    import ssl
+
+    major, minor, patch, *_ = ssl.OPENSSL_VERSION_INFO
+    if major >= 3:
+        return f"{major} - {major}.{minor}"
+    else:
+        return f"{major}.{minor} - {major}.{minor}.{patch}"
+
+
 def find_requirements():
     # read all dependencies into a dict: name -> key -> file -> value
     # read all julia compats into a dict: file -> compat
@@ -213,6 +223,13 @@ def find_requirements():
                         os.path.normpath(os.path.join(os.path.dirname(fn), v))
                     )
                 dep.setdefault(k, {})[fn] = v
+            # special handling of `verion = "<=python"` for `OpenSSL_jll
+            if (
+                name == "OpenSSL_jll"
+                and dep.get("uuid").get(fn) == "458c3c95-2e84-50aa-8efc-19380b2a3a95"
+                and dep.get("version").get(fn) == "<=python"
+            ):
+                dep["version"][fn] = openssl_compat()
         c = deps.get("julia")
         if c is not None:
             compats[fn] = Compat.parse(c)
@@ -331,33 +348,42 @@ def resolve(force=False, dry_run=False):
         if not STATE["offline"]:
             # write a Project.toml specifying UUIDs and compatibility of required
             # packages
+            projtoml = []
+            projtoml.append("[deps]")
+            projtoml.extend(f'{pkg.name} = "{pkg.uuid}"' for pkg in pkgs)
+            projtoml.append("[compat]")
+            projtoml.extend(
+                f'{pkg.name} = "{pkg.version}"' for pkg in pkgs if pkg.version
+            )
+            log("Writing Project.toml:")
+            for line in projtoml:
+                log(" ", line, cont=True)
             with open(os.path.join(project, "Project.toml"), "wt") as fp:
-                print("[deps]", file=fp)
-                for pkg in pkgs:
-                    print(f'{pkg.name} = "{pkg.uuid}"', file=fp)
-                print(file=fp)
-                print("[compat]", file=fp)
-                for pkg in pkgs:
-                    if pkg.version:
-                        print(f'{pkg.name} = "{pkg.version}"', file=fp)
-                print(file=fp)
+                for line in projtoml:
+                    print(line, file=fp)
             # remove Manifest.toml
             manifest_path = os.path.join(project, "Manifest.toml")
             if os.path.exists(manifest_path):
                 os.remove(manifest_path)
             # install the packages
-            dev_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if pkg.dev])
-            add_pkgs = ", ".join([pkg.jlstr() for pkg in pkgs if not pkg.dev])
+            dev_pkgs = [pkg for pkg in pkgs if pkg.dev]
+            add_pkgs = [pkg for pkg in pkgs if not pkg.dev]
             script = ["import Pkg", "Pkg.Registry.update()"]
             if dev_pkgs:
-                script.append(f"Pkg.develop([{dev_pkgs}])")
+                script.append("Pkg.develop([")
+                for pkg in dev_pkgs:
+                    script.append(f"  {pkg.jlstr()},")
+                script.append("])")
             if add_pkgs:
-                script.append(f"Pkg.add([{add_pkgs}])")
+                script.append("Pkg.add([")
+                for pkg in add_pkgs:
+                    script.append(f"  {pkg.jlstr()},")
+                script.append("])")
             script.append("Pkg.resolve()")
             script.append("Pkg.precompile()")
             log("Installing packages:")
             for line in script:
-                log("julia>", line, cont=True)
+                log(" ", line, cont=True)
             env = os.environ.copy()
             if sys.executable:
                 # prefer PythonCall to use the current Python executable
@@ -370,7 +396,7 @@ def resolve(force=False, dry_run=False):
                     "--project=" + project,
                     "--startup-file=no",
                     "-e",
-                    "; ".join(script),
+                    "\n".join(script),
                 ],
                 check=True,
                 env=env,
