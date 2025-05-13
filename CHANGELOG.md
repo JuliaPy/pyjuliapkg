@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.1.17 (2025-05-13)
+* Respect `JULIAUP_DEPOT_PATH` when searching for Julia using juliaup.
 * Add special handling of `<=python` version for OpenSSL compatibility between Julia and Python.
+* Bug fixes.
 
 ## v0.1.16 (2025-02-18)
 * Adds file-locking to protect multiple concurrent resolves.
