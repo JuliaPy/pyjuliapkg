@@ -193,10 +193,13 @@ def deps_files():
     )
 
 
-def openssl_compat():
-    import ssl
+def openssl_compat(version=None):
+    if version is None:
+        import ssl
 
-    major, minor, patch, *_ = ssl.OPENSSL_VERSION_INFO
+        version = ssl.OPENSSL_VERSION_INFO
+
+    major, minor, patch = version[:3]
     if major >= 3:
         return f"{major} - {major}.{minor}"
     else:
