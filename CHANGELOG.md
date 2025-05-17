@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Support editable dependencies from setuptools (experimental).
+
 ## v0.1.17 (2025-05-13)
 * Respect `JULIAUP_DEPOT_PATH` when searching for Julia using juliaup.
 * Add special handling of `<=python` version for OpenSSL compatibility between Julia and Python.

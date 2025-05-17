@@ -200,6 +200,26 @@ def can_skip_resolve():
     return deps
 
 
+def editable_deps_files():
+    """Finds setuptools-style editable dependencies."""
+    ans = []
+    for finder in sys.meta_path:
+        module_name = finder.__module__
+        if module_name.startswith("__editable___") and module_name.endswith("_finder"):
+            m = sys.modules[module_name]
+            paths = m.MAPPING.values()
+            for path in paths:
+                if not os.path.isdir(path):
+                    continue
+                fn = os.path.join(path, "juliapkg.json")
+                ans.append(fn)
+                for subdir in os.listdir(path):
+                    fn = os.path.join(path, subdir, "juliapkg.json")
+                    ans.append(fn)
+
+    return ans
+
+
 def deps_files():
     ans = []
     # the default deps file
@@ -215,6 +235,9 @@ def deps_files():
         for subdir in os.listdir(path):
             fn = os.path.join(path, subdir, "juliapkg.json")
             ans.append(fn)
+
+    ans += editable_deps_files()
+
     return list(
         set(
             os.path.normcase(os.path.normpath(os.path.abspath(fn)))

@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "juliapkg_test_editable_setuptools"
+version = "0.1.0"
+description = "Test package for editable installs with juliapkg.json"
+authors = [{name = "Test User", email = "test@example.com"}]
+requires-python = ">=3.7"
+
+[tool.setuptools]
+packages = ["juliapkg_test_editable_setuptools"]
+package-data = { "juliapkg_test_editable_setuptools" = ["juliapkg.json"] }
