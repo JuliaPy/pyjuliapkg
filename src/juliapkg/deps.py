@@ -169,11 +169,12 @@ def can_skip_resolve():
     return deps
 
 
-def _find_editable_deps_files():
+def editable_deps_files():
+    """Finds setuptools-style editable dependencies."""
     ans = []
     for finder in sys.meta_path:
         module_name = finder.__module__
-        if module_name.startswith("__editable___"):
+        if module_name.startswith("__editable___") and module_name.endswith("_finder"):
             m = sys.modules[module_name]
             paths = m.MAPPING.values()
             for path in paths:
@@ -204,7 +205,7 @@ def deps_files():
             fn = os.path.join(path, subdir, "juliapkg.json")
             ans.append(fn)
 
-    ans += _find_editable_deps_files()
+    ans += editable_deps_files()
 
     return list(
         set(
