@@ -104,7 +104,7 @@ More strategies may be added in a future release.
 
 JuliaPkg looks for `juliapkg.json` files in many locations, namely:
 - `{project}/pyjuliapkg` where project is as above (depending on your environment).
-- Every directory and direct sub-directory in `sys.path`.
+- Every installed package (looks through `sys.path` and `sys.meta_path`).
 
 The last point means that if you put a `juliapkg.json` file in a package, then install that
 package, then JuliaPkg will find those dependencies and install them.

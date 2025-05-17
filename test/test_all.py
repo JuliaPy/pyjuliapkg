@@ -112,3 +112,15 @@ def test_add_rm():
         juliapkg.rm("Example1", target=tdir)
 
         assert deps() == {"packages": {"Example2": {"uuid": "0002"}}}
+
+
+def test_editable_setuptools():
+    # test that editable deps files are found for setuptools packages
+    fn = os.path.join(
+        os.path.dirname(__file__),
+        "juliapkg_test_editable_setuptools",
+        "juliapkg_test_editable_setuptools",
+        "juliapkg.json",
+    )
+    assert os.path.exists(fn)
+    assert any(os.path.samefile(fn, x) for x in juliapkg.deps.deps_files())
