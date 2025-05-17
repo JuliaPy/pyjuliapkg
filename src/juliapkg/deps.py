@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from subprocess import run
+from typing import Union
 
 from filelock import FileLock
 
@@ -53,11 +54,11 @@ class PkgSpec:
         name: str,
         uuid: str,
         dev: bool = False,
-        version: str | Version | None = None,
-        path: str | None = None,
-        subdir: str | None = None,
-        url: str | None = None,
-        rev: str | None = None,
+        version: Union[str, Version, None] = None,
+        path: Union[str, None] = None,
+        subdir: Union[str, None] = None,
+        url: Union[str, None] = None,
+        rev: Union[str, None] = None,
     ):
         # Validate name (non-empty string)
         if not isinstance(name, str) or not name.strip():
