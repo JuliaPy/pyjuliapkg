@@ -25,7 +25,10 @@ build-backend = "hatchling.build"
 select = ["E", "W", "F", "I"]
 
 [tool.uv]
-dev-dependencies = ["pytest", "pre-commit"]
+dev-dependencies = ["pytest", "pre-commit", "juliapkg_test_editable_setuptools"]
+
+[tool.uv.sources]
+juliapkg_test_editable_setuptools = { path = "test/juliapkg_test_editable_setuptools", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/juliapkg"]
