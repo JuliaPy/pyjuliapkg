@@ -10,4 +10,5 @@ authors = [{name = "Test User", email = "test@example.com"}]
 requires-python = ">=3.7"
 
 [tool.setuptools]
+packages = ["juliapkg_test_editable_setuptools"]
 package-data = { "juliapkg_test_editable_setuptools" = ["juliapkg.json"] }

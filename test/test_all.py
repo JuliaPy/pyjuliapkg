@@ -119,7 +119,6 @@ def test_editable_setuptools():
     fn = os.path.join(
         os.path.dirname(__file__),
         "juliapkg_test_editable_setuptools",
-        "src",
         "juliapkg_test_editable_setuptools",
         "juliapkg.json",
     )
