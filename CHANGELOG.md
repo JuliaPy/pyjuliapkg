@@ -3,6 +3,7 @@
 ## Unreleased
 * Support editable dependencies from setuptools (experimental).
 * Add `update()` function.
+* Improved input validation.
 
 ## v0.1.17 (2025-05-13)
 * Respect `JULIAUP_DEPOT_PATH` when searching for Julia using juliaup.

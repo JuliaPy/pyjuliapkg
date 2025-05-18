@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from subprocess import run
+from typing import Union
 
 from filelock import FileLock
 
@@ -50,22 +51,53 @@ def save_meta(meta):
 class PkgSpec:
     def __init__(
         self,
-        name,
-        uuid,
-        dev=False,
-        version=None,
-        path=None,
-        subdir=None,
-        url=None,
-        rev=None,
+        name: str,
+        uuid: str,
+        dev: bool = False,
+        version: Union[str, Version, None] = None,
+        path: Union[str, None] = None,
+        subdir: Union[str, None] = None,
+        url: Union[str, None] = None,
+        rev: Union[str, None] = None,
     ):
+        # Validate name (non-empty string)
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("name must be a non-empty string")
         self.name = name
+
+        # Validate UUID (non-empty string, could add more specific UUID validation)
+        if not isinstance(uuid, str) or not uuid.strip():
+            raise ValueError("uuid must be a non-empty string")
         self.uuid = uuid
+
+        # Validate dev (boolean)
+        if not isinstance(dev, bool):
+            raise TypeError("dev must be a boolean")
         self.dev = dev
+
+        # Validate version (string, Version, or None)
+        if version is not None and not isinstance(version, (str, Version)):
+            raise TypeError("version must be a string, Version, or None")
         self.version = version
+
+        # Validate path (string or None)
+        if path is not None and not isinstance(path, str):
+            raise TypeError("path must be a string or None")
         self.path = path
+
+        # Validate subdir (string or None)
+        if subdir is not None and not isinstance(subdir, str):
+            raise TypeError("subdir must be a string or None")
         self.subdir = subdir
+
+        # Validate url (string or None)
+        if url is not None and not isinstance(url, str):
+            raise TypeError("url must be a string or None")
         self.url = url
+
+        # Validate rev (string or None)
+        if rev is not None and not isinstance(rev, str):
+            raise TypeError("rev must be a string or None")
         self.rev = rev
 
     def jlstr(self):
