@@ -59,8 +59,9 @@ Julia v1.*.* and the Example package v0.5.*:
 
 - `juliapkg.executable()` returns a compatible Julia executable.
 - `juliapkg.project()` returns the project into which the packages have been installed.
-- `juliapkg.resolve(force=False)` ensures all the dependencies are installed. You don't
+- `juliapkg.resolve(force=False, dry_run=False)` ensures all the dependencies are installed. You don't
   normally need to do this because the other functions resolve automatically.
+- `juliapkg.update(dry_run=False)` updates the dependencies.
 
 ## Details
 

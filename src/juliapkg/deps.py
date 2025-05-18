@@ -9,7 +9,7 @@ from filelock import FileLock
 
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
-from .install_julia import log
+from .install_julia import log, log_script
 from .state import STATE
 
 logger = logging.getLogger("juliapkg")
@@ -331,10 +331,25 @@ def find_requirements():
     return compat, deps
 
 
-def resolve(force=False, dry_run=False):
+def resolve(force=False, dry_run=False, update=False):
+    """
+    Resolve the dependencies.
+
+    Args:
+        force (bool): Force resolution.
+        dry_run (bool): Dry run.
+        update (bool): Update the dependencies.
+
+    Returns:
+        bool: Whether the dependencies are resolved (always True unless dry_run is
+            True).
+    """
+    # update implies force
+    if update:
+        force = True
     # fast check to see if we have already resolved
     if (not force) and STATE["resolved"]:
-        return False
+        return True
     STATE["resolved"] = False
     # use a lock to prevent concurrent resolution
     project = STATE["project"]
@@ -381,20 +396,24 @@ def resolve(force=False, dry_run=False):
             projtoml.extend(
                 f'{pkg.name} = "{pkg.version}"' for pkg in pkgs if pkg.version
             )
-            log("Writing Project.toml:")
-            for line in projtoml:
-                log(" ", line, cont=True)
+            log_script(projtoml, "Writing Project.toml:")
             with open(os.path.join(project, "Project.toml"), "wt") as fp:
                 for line in projtoml:
                     print(line, file=fp)
-            # remove Manifest.toml
-            manifest_path = os.path.join(project, "Manifest.toml")
-            if os.path.exists(manifest_path):
-                os.remove(manifest_path)
             # install the packages
-            dev_pkgs = [pkg for pkg in pkgs if pkg.dev]
-            add_pkgs = [pkg for pkg in pkgs if not pkg.dev]
-            script = ["import Pkg", "Pkg.Registry.update()"]
+            add_or_dev_pkgs = [
+                pkg
+                for pkg in pkgs
+                if pkg.url is not None
+                or pkg.subdir is not None
+                or pkg.rev is not None
+                or pkg.path is not None
+            ]
+            dev_pkgs = [pkg for pkg in add_or_dev_pkgs if pkg.dev]
+            add_pkgs = [pkg for pkg in add_or_dev_pkgs if not pkg.dev]
+            script = ["import Pkg"]
+            if add_or_dev_pkgs or not update:
+                script.append("Pkg.Registry.update()")
             if dev_pkgs:
                 script.append("Pkg.develop([")
                 for pkg in dev_pkgs:
@@ -405,28 +424,13 @@ def resolve(force=False, dry_run=False):
                 for pkg in add_pkgs:
                     script.append(f"  {pkg.jlstr()},")
                 script.append("])")
-            script.append("Pkg.resolve()")
+            if update:
+                script.append("Pkg.update()")
+            else:
+                script.append("Pkg.resolve()")
             script.append("Pkg.precompile()")
-            log("Installing packages:")
-            for line in script:
-                log(" ", line, cont=True)
-            env = os.environ.copy()
-            if sys.executable:
-                # prefer PythonCall to use the current Python executable
-                # TODO: this is a hack, it would be better for PythonCall to detect that
-                #   Julia is being called from Python
-                env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
-            run(
-                [
-                    exe,
-                    "--project=" + project,
-                    "--startup-file=no",
-                    "-e",
-                    "\n".join(script),
-                ],
-                check=True,
-                env=env,
-            )
+            log_script(script, "Installing packages:")
+            run_julia(script, executable=exe, project=project)
         # record that we resolved
         save_meta(
             {
@@ -454,6 +458,39 @@ def resolve(force=False, dry_run=False):
         lock.release()
 
 
+def run_julia(script, executable=None, project=None):
+    """
+    Run a Julia script with the specified executable and project.
+
+    Args:
+        executable (str): Path to the Julia executable.
+        project (str): Path to the Julia project.
+        script (list): List of strings representing the Julia script to run.
+    """
+    if executable is None:
+        executable = STATE["executable"]
+    if project is None:
+        project = STATE["project"]
+
+    env = os.environ.copy()
+    if sys.executable:
+        # prefer PythonCall to use the current Python executable
+        # TODO: this is a hack, it would be better for PythonCall to detect that
+        #   Julia is being called from Python
+        env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
+    run(
+        [
+            executable,
+            "--project=" + project,
+            "--startup-file=no",
+            "-e",
+            "\n".join(script),
+        ],
+        check=True,
+        env=env,
+    )
+
+
 def executable():
     resolve()
     return STATE["executable"]
@@ -462,6 +499,20 @@ def executable():
 def project():
     resolve()
     return STATE["project"]
+
+
+def update(dry_run=False):
+    """
+    Resolve and update the dependencies.
+
+    Args:
+        dry_run (bool): Dry run.
+
+    Returns:
+        bool: Whether the dependencies were updated (always True unless dry_run is
+            True).
+    """
+    return resolve(dry_run=dry_run, update=True)
 
 
 def cur_deps_file(target=None):

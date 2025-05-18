@@ -8,6 +8,7 @@ from .deps import (
     resolve,
     rm,
     status,
+    update,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "add",
     "rm",
     "offline",
+    "update",
 ]

@@ -24,6 +24,13 @@ def log(*args, cont=False):
     print(prefix, *args)
 
 
+def log_script(script, title=None):
+    if title is not None:
+        log(title)
+    for line in script:
+        log("|", line, cont=True)
+
+
 def all_julia_versions():
     global _all_julia_versions
     if _all_julia_versions is None:
