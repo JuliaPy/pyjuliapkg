@@ -437,19 +437,9 @@ def resolve(force=False, dry_run=False, update=False):
             if os.path.exists(manifest_path):
                 os.remove(manifest_path)
             # install the packages
-            add_or_dev_pkgs = [
-                pkg
-                for pkg in pkgs
-                if pkg.url is not None
-                or pkg.subdir is not None
-                or pkg.rev is not None
-                or pkg.path is not None
-            ]
-            dev_pkgs = [pkg for pkg in add_or_dev_pkgs if pkg.dev]
-            add_pkgs = [pkg for pkg in add_or_dev_pkgs if not pkg.dev]
-            script = ["import Pkg"]
-            if add_or_dev_pkgs or not update or force:
-                script.append("Pkg.Registry.update()")
+            dev_pkgs = [pkg for pkg in pkgs if pkg.dev]
+            add_pkgs = [pkg for pkg in pkgs if not pkg.dev]
+            script = ["import Pkg", "Pkg.Registry.update()"]
             if dev_pkgs:
                 script.append("Pkg.develop([")
                 for pkg in dev_pkgs:
