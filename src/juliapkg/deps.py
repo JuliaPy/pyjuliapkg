@@ -432,6 +432,10 @@ def resolve(force=False, dry_run=False, update=False):
             with open(os.path.join(project, "Project.toml"), "wt") as fp:
                 for line in projtoml:
                     print(line, file=fp)
+            # remove Manifest.toml
+            manifest_path = os.path.join(project, "Manifest.toml")
+            if os.path.exists(manifest_path):
+                os.remove(manifest_path)
             # install the packages
             add_or_dev_pkgs = [
                 pkg
