@@ -448,7 +448,7 @@ def resolve(force=False, dry_run=False, update=False):
             dev_pkgs = [pkg for pkg in add_or_dev_pkgs if pkg.dev]
             add_pkgs = [pkg for pkg in add_or_dev_pkgs if not pkg.dev]
             script = ["import Pkg"]
-            if add_or_dev_pkgs or not update:
+            if add_or_dev_pkgs or not update or force:
                 script.append("Pkg.Registry.update()")
             if dev_pkgs:
                 script.append("Pkg.develop([")
