@@ -1,7 +1,8 @@
 import os
 import sys
+from typing import Final
 
-STATE = {}
+STATE: Final = {}
 
 
 def get_config(name, default=None):
@@ -39,8 +40,7 @@ def get_config_bool(name, default=False):
 
 
 def reset_state():
-    global STATE
-    STATE = {}
+    STATE.clear()
 
     # Are we running a dev version?
     STATE["dev"] = os.path.exists(
