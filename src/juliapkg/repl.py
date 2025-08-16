@@ -1,6 +1,7 @@
 import os
-import sys
 import subprocess
+import sys
+
 
 def run(*args: str):
     from .deps import STATE, resolve

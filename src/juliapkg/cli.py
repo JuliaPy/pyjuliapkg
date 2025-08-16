@@ -1,4 +1,5 @@
 """Command-line interface for juliapkg."""
+
 import os
 import subprocess
 
@@ -22,9 +23,13 @@ try:
     )
     from .repl import run as _run
 
-    JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR = os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR", "0") == "1"
+    JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR = (
+        os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR", "0") == "1"
+    )
+
     class JuliaPkgGroup(click.Group):
         """Custom group to avoid long stacktraces when Julia exits with an error."""
+
         @staticmethod
         def _is_graceful_exit(e: subprocess.CalledProcessError) -> bool:
             """Try to guess if a CalledProcessError was Julia gracefully exiting."""
@@ -35,14 +40,15 @@ try:
                 return super().invoke(ctx)
             except subprocess.CalledProcessError as e:
                 # Julia already printed an error message
-                if JuliaPkgGroup._is_graceful_exit(e) and not JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR:
+                if (
+                    JuliaPkgGroup._is_graceful_exit(e)
+                    and not JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR
+                ):
                     click.get_current_context().exit(1)
                 else:
                     raise
 
-    cli = JuliaPkgGroup(
-        help="JuliaPkg -  Manage your Julia dependencies from Python."
-    )
+    cli = JuliaPkgGroup(help="JuliaPkg -  Manage your Julia dependencies from Python.")
 
     @cli.command()
     @click.argument("package")
@@ -92,6 +98,7 @@ try:
             target=target,
         )
         click.echo(f"Queued removal of {package}. Run `resolve` to apply changes.")
+
     cli.add_command(remove, name="rm")
 
     @cli.command(name="status")
@@ -101,6 +108,7 @@ try:
         _status(
             target=target,
         )
+
     cli.add_command(status, name="st")
 
     @cli.command(name="update")
@@ -110,16 +118,18 @@ try:
         _update(
             dry_run=dry_run,
         )
+
     cli.add_command(update, name="up")
 
     @cli.command(name="run", context_settings=dict(ignore_unknown_options=True))
     @click.argument("args", nargs=-1)
     def run(args):
         """Pass-through to Julia CLI.
-        
+
         For example, use `run` to launch a REPL or `run script.jl` to run a script.
         """
         _run(*args)
+
     cli.add_command(run, name="repl")
 
 except ImportError:
