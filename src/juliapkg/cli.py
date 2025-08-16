@@ -9,12 +9,12 @@ from .deps import STATE, add, resolve, rm, status, update
 try:
     import click
 
-    ALWAYS_SHOW_PYTHON_ERROR = (
-        os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI", "0") == "1"
-    )
-
     class JuliaPkgGroup(click.Group):
         """Custom group to avoid long stacktraces when Julia exits with an error."""
+
+        @property
+        def always_show_python_error(self) -> bool:
+            return os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI", "0") == "1"
 
         @staticmethod
         def _is_graceful_exit(e: subprocess.CalledProcessError) -> bool:
@@ -26,7 +26,7 @@ try:
                 return super().invoke(ctx)
             except subprocess.CalledProcessError as e:
                 # Julia already printed an error message
-                if JuliaPkgGroup._is_graceful_exit(e) and not ALWAYS_SHOW_PYTHON_ERROR:
+                if JuliaPkgGroup._is_graceful_exit(e) and not self.always_show_python_error:
                     click.get_current_context().exit(1)
                 else:
                     raise
