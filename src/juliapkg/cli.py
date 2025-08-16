@@ -34,7 +34,7 @@ try:
                 else:
                     raise
 
-    cli = JuliaPkgGroup(help="JuliaPkg -  Manage your Julia dependencies from Python.")
+    cli = JuliaPkgGroup(help="JuliaPkg - Manage your Julia dependencies from Python.")
 
     @cli.command(name="add")
     @click.argument("package")

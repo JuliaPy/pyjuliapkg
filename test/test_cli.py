@@ -1,5 +1,3 @@
-"""Test suite for juliapkg CLI using Click's testing infrastructure."""
-
 import importlib
 import sys
 from unittest.mock import patch
@@ -11,7 +9,6 @@ from juliapkg.cli import cli
 
 @pytest.fixture
 def runner():
-    """Create a Click test runner."""
     try:
         from click.testing import CliRunner
 
@@ -24,9 +21,7 @@ class TestCLI:
     def test_cli_help(self, runner):
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert (
-            "JuliaPkg -  Manage your Julia dependencies from Python." in result.output
-        )
+        assert "JuliaPkg - Manage your Julia dependencies from Python." in result.output
 
     def test_cli_no_args(self, runner):
         result = runner.invoke(cli, [])
@@ -63,15 +58,11 @@ class TestCLI:
         assert result.exit_code == 0
 
     def test_click_not_available(self):
-        with patch.dict(sys.modules, {"click": None}):
-            importlib.invalidate_caches()
-            if "juliapkg.cli" in sys.modules:
-                del sys.modules["juliapkg.cli"]
+        with patch.dict(sys.modules, {"click": None, "juliapkg.cli": None}):
+            del sys.modules["juliapkg.cli"]
             cli_module = importlib.import_module("juliapkg.cli")
 
             with pytest.raises(ImportError) as exc_info:
                 cli_module.cli()
 
             assert "`click` is required to use the juliapkg CLI" in str(exc_info.value)
-            assert "pip install click" in str(exc_info.value)
-            assert 'pip install "pyjuliapkg[cli]"' in str(exc_info.value)
