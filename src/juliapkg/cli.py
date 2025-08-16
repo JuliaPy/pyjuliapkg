@@ -1,4 +1,6 @@
 """Command-line interface for juliapkg."""
+import os
+import subprocess
 
 try:
     import click
@@ -20,10 +22,27 @@ try:
     )
     from .repl import run as _run
 
-    @click.group()
-    def cli():
-        """JuliaPkg - Julia version manager and package manager."""
-        pass
+    JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR = os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR", "0") == "1"
+    class JuliaPkgGroup(click.Group):
+        """Custom group to avoid long stacktraces when Julia exits with an error."""
+        @staticmethod
+        def _is_graceful_exit(e: subprocess.CalledProcessError) -> bool:
+            """Try to guess if a CalledProcessError was Julia gracefully exiting."""
+            return e.returncode == 1
+
+        def invoke(self, ctx):
+            try:
+                return super().invoke(ctx)
+            except subprocess.CalledProcessError as e:
+                # Julia already printed an error message
+                if JuliaPkgGroup._is_graceful_exit(e) and not JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR:
+                    click.get_current_context().exit(1)
+                else:
+                    raise
+
+    cli = JuliaPkgGroup(
+        help="JuliaPkg -  Manage your Julia dependencies from Python."
+    )
 
     @cli.command()
     @click.argument("package")
@@ -48,6 +67,7 @@ try:
             rev=rev,
             target=target,
         )
+        click.echo(f"Queued addition of {package}. Run `resolve` to apply changes.")
 
     @cli.command()
     @click.option("--force", is_flag=True, help="Force resolution")
@@ -60,6 +80,7 @@ try:
             dry_run=dry_run,
             update=update,
         )
+        click.echo("Resolved dependencies.")
 
     @cli.command(name="remove")
     @click.argument("package")
@@ -70,6 +91,7 @@ try:
             package,
             target=target,
         )
+        click.echo(f"Queued removal of {package}. Run `resolve` to apply changes.")
     cli.add_command(remove, name="rm")
 
     @cli.command(name="status")
@@ -82,7 +104,7 @@ try:
     cli.add_command(status, name="st")
 
     @cli.command(name="update")
-    @click.option("--dry_run", help="Dry run (don't actually install)")
+    @click.option("--dry-run", is_flag=True, help="Dry run (don't actually install)")
     def update(dry_run):
         """Update Julia packages in the project."""
         _update(
@@ -104,7 +126,7 @@ except ImportError:
 
     def cli():
         raise ImportError(
-            "click is required to use the juliapkg CLI. "
+            "`click` is required to use the juliapkg CLI. "
             "Please install it with `pip install click` or "
             '`pip install "pyjuliapkg[cli]".'
         )

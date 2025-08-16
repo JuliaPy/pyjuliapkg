@@ -1,8 +1,8 @@
 import os
 import sys
-from subprocess import run as _run
+import subprocess
 
-def run(*args):
+def run(*args: str):
     from .deps import STATE, resolve
 
     resolve()
@@ -21,8 +21,10 @@ def run(*args):
         "--project=" + project,
     ]
     for arg in args:
+        if arg.startswith("--project"):
+            raise ValueError("Do not specify --project when using pyjuliapkg.")
         cmd.append(arg)
-    _run(
+    subprocess.run(
         cmd,
         check=True,
         env=env,
