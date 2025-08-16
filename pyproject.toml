@@ -15,7 +15,6 @@ classifiers = [
 pyjuliapkg = "juliapkg.cli:cli"
 
 [project.optional-dependencies]
-dev = ["pytest", "pre-commit"]
 cli = ["click >=8.0,<9.0"]
 
 [project.urls]
