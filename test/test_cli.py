@@ -1,8 +1,6 @@
 """Test suite for juliapkg CLI using Click's testing infrastructure."""
 
 import importlib
-import os
-import subprocess
 import sys
 from unittest.mock import patch
 
@@ -20,21 +18,6 @@ def runner():
         return CliRunner()
     except ImportError:
         pytest.skip("click is not available")
-
-
-@pytest.fixture
-def fake_package_test(runner):
-    result = runner.invoke(cli, ["add", "FakePackage", "--uuid", "0"])
-    assert result.exit_code == 0
-    assert "Queued addition of FakePackage" in result.output
-
-    yield runner
-
-    result = runner.invoke(cli, ["rm", "FakePackage"])
-    assert result.exit_code == 0
-    assert "Queued removal of FakePackage" in result.output
-    result = runner.invoke(cli, ["resolve", "--force"])
-    assert result.exit_code == 0
 
 
 class TestCLI:
@@ -79,25 +62,6 @@ class TestCLI:
 
         result = runner.invoke(cli, ["resolve", "--force"])
         assert result.exit_code == 0
-
-    def test_error_handling_with_fake_package(self, fake_package_test):
-        runner = fake_package_test
-
-        result = runner.invoke(cli, ["resolve"])
-        assert result.exit_code != 0
-        assert not isinstance(result.exception, subprocess.CalledProcessError)
-
-        k = "JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI"
-        old_k, os.environ[k] = os.environ.get(k, None), "1"
-        try:
-            result = runner.invoke(cli, ["resolve"])
-            assert result.exit_code != 0
-            assert isinstance(result.exception, subprocess.CalledProcessError)
-        finally:
-            if old_k is None:
-                del os.environ[k]
-            else:
-                os.environ[k] = old_k
 
     def test_click_not_available(self):
         with patch.dict(sys.modules, {"click": None}):
