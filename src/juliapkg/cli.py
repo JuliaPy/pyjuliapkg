@@ -15,6 +15,10 @@ try:
     from .deps import (
         status as _status,
     )
+    from .deps import (
+        update as _update,
+    )
+    from .repl import run as _run
 
     @click.group()
     def cli():
@@ -33,34 +37,17 @@ try:
     @click.option("--target", help="Target environment")
     def add(package, uuid, version, dev, path, subdir, url, rev, target):
         """Add a Julia package to the project."""
-        kwargs = {}
-        if version:
-            kwargs["version"] = version
-        if dev:
-            kwargs["dev"] = dev
-        if path:
-            kwargs["path"] = path
-        if subdir:
-            kwargs["subdir"] = subdir
-        if url:
-            kwargs["url"] = url
-        if rev:
-            kwargs["rev"] = rev
-
-        _add(package, uuid=uuid, target=target, **kwargs)
-
-    @cli.command()
-    @click.argument("package")
-    @click.option("--target", help="Target environment")
-    def rm(package, target):
-        """Remove a Julia package from the project."""
-        _rm(package, target=target)
-
-    @cli.command()
-    @click.option("--target", help="Target environment")
-    def status(target):
-        """Show the status of Julia packages in the project."""
-        _status(target=target)
+        _add(
+            package,
+            uuid=uuid,
+            version=version,
+            dev=dev,
+            path=path,
+            subdir=subdir,
+            url=url,
+            rev=rev,
+            target=target,
+        )
 
     @cli.command()
     @click.option("--force", is_flag=True, help="Force resolution")
@@ -68,7 +55,50 @@ try:
     @click.option("--update", is_flag=True, help="Update dependencies")
     def resolve(force, dry_run, update):
         """Resolve and install Julia dependencies."""
-        _resolve(force=force, dry_run=dry_run, update=update)
+        _resolve(
+            force=force,
+            dry_run=dry_run,
+            update=update,
+        )
+
+    @cli.command(name="remove")
+    @click.argument("package")
+    @click.option("--target", help="Target environment")
+    def remove(package, target):
+        """Remove a Julia package from the project."""
+        _rm(
+            package,
+            target=target,
+        )
+    cli.add_command(remove, name="rm")
+
+    @cli.command(name="status")
+    @click.option("--target", help="Target environment")
+    def status(target):
+        """Show the status of Julia packages in the project."""
+        _status(
+            target=target,
+        )
+    cli.add_command(status, name="st")
+
+    @cli.command(name="update")
+    @click.option("--dry_run", help="Dry run (don't actually install)")
+    def update(dry_run):
+        """Update Julia packages in the project."""
+        _update(
+            dry_run=dry_run,
+        )
+    cli.add_command(update, name="up")
+
+    @cli.command(name="run", context_settings=dict(ignore_unknown_options=True))
+    @click.argument("args", nargs=-1)
+    def run(args):
+        """Pass-through to Julia CLI.
+        
+        For example, use `run` to launch a REPL or `run script.jl` to run a script.
+        """
+        _run(*args)
+    cli.add_command(run, name="repl")
 
 except ImportError:
 
