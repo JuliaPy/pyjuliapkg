@@ -26,7 +26,10 @@ try:
                 return super().invoke(ctx)
             except subprocess.CalledProcessError as e:
                 # Julia already printed an error message
-                if JuliaPkgGroup._is_graceful_exit(e) and not self.always_show_python_error:
+                if (
+                    JuliaPkgGroup._is_graceful_exit(e)
+                    and not self.always_show_python_error
+                ):
                     click.get_current_context().exit(1)
                 else:
                     raise
