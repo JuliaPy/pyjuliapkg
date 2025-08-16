@@ -2,11 +2,18 @@
 
 try:
     import click
+
     from .deps import (
         add as _add,
-        rm as _rm,
-        status as _status,
+    )
+    from .deps import (
         resolve as _resolve,
+    )
+    from .deps import (
+        rm as _rm,
+    )
+    from .deps import (
+        status as _status,
     )
 
     @click.group()
