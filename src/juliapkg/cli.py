@@ -2,29 +2,15 @@
 
 import os
 import subprocess
+import sys
+
+from .deps import STATE, add, resolve, rm, status, update
 
 try:
     import click
 
-    from .deps import (
-        add as _add,
-    )
-    from .deps import (
-        resolve as _resolve,
-    )
-    from .deps import (
-        rm as _rm,
-    )
-    from .deps import (
-        status as _status,
-    )
-    from .deps import (
-        update as _update,
-    )
-    from .repl import run as _run
-
     ALWAYS_SHOW_PYTHON_ERROR = (
-        os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR", "0") == "1"
+        os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI", "0") == "1"
     )
 
     class JuliaPkgGroup(click.Group):
@@ -47,7 +33,7 @@ try:
 
     cli = JuliaPkgGroup(help="JuliaPkg -  Manage your Julia dependencies from Python.")
 
-    @cli.command()
+    @cli.command(name="add")
     @click.argument("package")
     @click.option("--uuid", required=True, help="UUID of the package")
     @click.option("--version", help="Version constraint")
@@ -57,9 +43,9 @@ try:
     @click.option("--url", help="Git URL for the package")
     @click.option("--rev", help="Git revision/branch/tag")
     @click.option("--target", help="Target environment")
-    def add(package, uuid, version, dev, path, subdir, url, rev, target):
+    def add_cli(package, uuid, version, dev, path, subdir, url, rev, target):
         """Add a Julia package to the project."""
-        _add(
+        add(
             package,
             uuid=uuid,
             version=version,
@@ -72,62 +58,73 @@ try:
         )
         click.echo(f"Queued addition of {package}. Run `resolve` to apply changes.")
 
-    @cli.command()
+    @cli.command(name="resolve")
     @click.option("--force", is_flag=True, help="Force resolution")
     @click.option("--dry-run", is_flag=True, help="Dry run (don't actually install)")
     @click.option("--update", is_flag=True, help="Update dependencies")
-    def resolve(force, dry_run, update):
+    def resolve_cli(force, dry_run, update):
         """Resolve and install Julia dependencies."""
-        _resolve(
-            force=force,
-            dry_run=dry_run,
-            update=update,
-        )
+        resolve(force=force, dry_run=dry_run, update=update)
         click.echo("Resolved dependencies.")
 
     @cli.command(name="remove")
     @click.argument("package")
     @click.option("--target", help="Target environment")
-    def remove(package, target):
+    def remove_cli(package, target):
         """Remove a Julia package from the project."""
-        _rm(
-            package,
-            target=target,
-        )
+        rm(package, target=target)
         click.echo(f"Queued removal of {package}. Run `resolve` to apply changes.")
 
-    cli.add_command(remove, name="rm")
+    cli.add_command(remove_cli, name="rm")
 
     @cli.command(name="status")
     @click.option("--target", help="Target environment")
-    def status(target):
+    def status_cli(target):
         """Show the status of Julia packages in the project."""
-        _status(
-            target=target,
-        )
+        status(target=target)
 
-    cli.add_command(status, name="st")
+    cli.add_command(status_cli, name="st")
 
     @cli.command(name="update")
     @click.option("--dry-run", is_flag=True, help="Dry run (don't actually install)")
-    def update(dry_run):
+    def update_cli(dry_run):
         """Update Julia packages in the project."""
-        _update(
-            dry_run=dry_run,
-        )
+        update(dry_run=dry_run)
 
-    cli.add_command(update, name="up")
+    cli.add_command(update_cli, name="up")
 
     @cli.command(name="run", context_settings=dict(ignore_unknown_options=True))
     @click.argument("args", nargs=-1)
-    def run(args):
+    def run_cli(args):
         """Pass-through to Julia CLI.
 
         For example, use `run` to launch a REPL or `run script.jl` to run a script.
         """
-        _run(*args)
+        resolve()
+        executable = STATE["executable"]
+        project = STATE["project"]
 
-    cli.add_command(run, name="repl")
+        env = os.environ.copy()
+        if sys.executable:
+            # prefer PythonCall to use the current Python executable
+            # TODO: this is a hack, it would be better for PythonCall to detect that
+            #   Julia is being called from Python
+            env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
+        cmd = [
+            executable,
+            "--project=" + project,
+        ]
+        for arg in args:
+            if arg.startswith("--project"):
+                raise ValueError("Do not specify --project when using pyjuliapkg.")
+            cmd.append(arg)
+        subprocess.run(
+            cmd,
+            check=True,
+            env=env,
+        )
+
+    cli.add_command(run_cli, name="repl")
 
 except ImportError:
 
