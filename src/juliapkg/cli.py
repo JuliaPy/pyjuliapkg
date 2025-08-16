@@ -23,7 +23,7 @@ try:
     )
     from .repl import run as _run
 
-    JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR = (
+    ALWAYS_SHOW_PYTHON_ERROR = (
         os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR", "0") == "1"
     )
 
@@ -40,10 +40,7 @@ try:
                 return super().invoke(ctx)
             except subprocess.CalledProcessError as e:
                 # Julia already printed an error message
-                if (
-                    JuliaPkgGroup._is_graceful_exit(e)
-                    and not JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR
-                ):
+                if JuliaPkgGroup._is_graceful_exit(e) and not ALWAYS_SHOW_PYTHON_ERROR:
                     click.get_current_context().exit(1)
                 else:
                     raise
