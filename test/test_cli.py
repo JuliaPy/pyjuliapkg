@@ -87,14 +87,14 @@ class TestCLI:
         assert result.exit_code != 0
         assert not isinstance(result.exception, subprocess.CalledProcessError)
 
-        os.environ["JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI"] = "1"
+        k = "JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI"
+        old_k, os.environ[k] = os.environ[k], "1"
         try:
             result = runner.invoke(cli, ["resolve"])
             assert result.exit_code != 0
             assert isinstance(result.exception, subprocess.CalledProcessError)
         finally:
-            # clean up environment variable
-            del os.environ["JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI"]
+            os.environ[k] = old_k
 
     def test_click_not_available(self):
         with patch.dict(sys.modules, {"click": None}):
