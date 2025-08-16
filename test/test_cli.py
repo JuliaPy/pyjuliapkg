@@ -83,14 +83,14 @@ class TestCLI:
     def test_error_handling_with_fake_package(self, fake_package_test):
         runner = fake_package_test
 
-        result = runner.invoke(cli, ["resolve"])
+        result = runner.invoke(cli, ["resolve", "--force"])
         assert result.exit_code != 0
         assert not isinstance(result.exception, subprocess.CalledProcessError)
 
         k = "JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI"
         old_k, os.environ[k] = os.environ[k], "1"
         try:
-            result = runner.invoke(cli, ["resolve"])
+            result = runner.invoke(cli, ["resolve", "--force"])
             assert result.exit_code != 0
             assert isinstance(result.exception, subprocess.CalledProcessError)
         finally:
