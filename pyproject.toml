@@ -23,6 +23,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I"]
+ignore = ["E712"]
 
 [tool.uv]
 dev-dependencies = ["pytest", "pre-commit", "juliapkg_test_editable_setuptools"]
