@@ -18,7 +18,7 @@ def test_pkgspec_validation():
     spec = PkgSpec(name="Example", uuid="123e4567-e89b-12d3-a456-426614174000")
     assert spec.name == "Example"
     assert spec.uuid == "123e4567-e89b-12d3-a456-426614174000"
-    assert spec.dev is False
+    assert spec.dev == False
     assert spec.version is None
     assert spec.path is None
     assert spec.subdir is None
@@ -36,7 +36,9 @@ def test_pkgspec_validation():
         url="https://example.com/pkg.git",
         rev="main",
     )
-    assert spec.dev is True
+    assert spec.name == "Example"
+    assert spec.uuid == "123e4567-e89b-12d3-a456-426614174000"
+    assert spec.dev == True
     assert spec.version == "1.0.0"
     assert spec.path == "/path/to/pkg"
     assert spec.subdir == "subdir"
@@ -44,37 +46,56 @@ def test_pkgspec_validation():
     assert spec.rev == "main"
 
     # Test invalid name
-    with pytest.raises(ValueError, match="name must be a non-empty string"):
-        PkgSpec(name="", uuid="0000")
-    with pytest.raises(ValueError, match="name must be a non-empty string"):
-        PkgSpec(name=123, uuid="0000")
+    with pytest.raises(TypeError, match="package name must be a 'str', got 'int'"):
+        PkgSpec(name=123, uuid=spec.uuid)
+    with pytest.raises(ValueError, match="package name cannot be empty"):
+        PkgSpec(name="", uuid=spec.uuid)
+    with pytest.raises(ValueError, match="package name cannot end with '.jl'"):
+        PkgSpec(name="Foo.jl", uuid=spec.uuid)
+    with pytest.raises(
+        ValueError, match="package name contains invalid characters '.-'"
+    ):
+        PkgSpec(name="Foo.Bar-Baz!", uuid=spec.uuid)
+    with pytest.raises(
+        ValueError, match="package name has invalid first character '0'"
+    ):
+        PkgSpec(name="0Foo", uuid=spec.uuid)
+    with pytest.raises(
+        ValueError, match="package name has invalid first character '!'"
+    ):
+        PkgSpec(name="!Foo", uuid=spec.uuid)
 
     # Test invalid UUID
-    with pytest.raises(ValueError, match="uuid must be a non-empty string"):
-        PkgSpec(name="Example", uuid="")
-    with pytest.raises(ValueError, match="uuid must be a non-empty string"):
+    with pytest.raises(TypeError, match="package uuid must be a 'str', got 'int'"):
         PkgSpec(name="Example", uuid=123)
+    with pytest.raises(
+        ValueError,
+        match="package uuid must be of form XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+    ):
+        PkgSpec(name="Example", uuid="")
 
     # Test invalid dev flag
-    with pytest.raises(TypeError, match="dev must be a boolean"):
-        PkgSpec(name="Example", uuid="0000", dev="not-a-boolean")
+    with pytest.raises(TypeError, match="package dev must be a 'bool'"):
+        PkgSpec(name="Example", uuid=spec.uuid, dev="not-a-boolean")
 
     # Test invalid version type
-    with pytest.raises(TypeError, match="version must be a string, Version, or None"):
-        PkgSpec(name="Example", uuid="0000", version=123)
+    with pytest.raises(
+        TypeError, match="package version must be a 'str', 'Version', or 'None'"
+    ):
+        PkgSpec(name="Example", uuid=spec.uuid, version=123)
 
     # Test invalid path type
-    with pytest.raises(TypeError, match="path must be a string or None"):
-        PkgSpec(name="Example", uuid="0000", path=123)
+    with pytest.raises(TypeError, match="package path must be a 'str' or 'None'"):
+        PkgSpec(name="Example", uuid=spec.uuid, path=123)
 
     # Test invalid subdir type
-    with pytest.raises(TypeError, match="subdir must be a string or None"):
-        PkgSpec(name="Example", uuid="0000", subdir=123)
+    with pytest.raises(TypeError, match="package subdir must be a 'str' or 'None'"):
+        PkgSpec(name="Example", uuid=spec.uuid, subdir=123)
 
     # Test invalid url type
-    with pytest.raises(TypeError, match="url must be a string or None"):
-        PkgSpec(name="Example", uuid="0000", url=123)
+    with pytest.raises(TypeError, match="package url must be a 'str' or 'None'"):
+        PkgSpec(name="Example", uuid=spec.uuid, url=123)
 
     # Test invalid rev type
-    with pytest.raises(TypeError, match="rev must be a string or None"):
-        PkgSpec(name="Example", uuid="0000", rev=123)
+    with pytest.raises(TypeError, match="package rev must be a 'str' or 'None'"):
+        PkgSpec(name="Example", uuid=spec.uuid, rev=123)

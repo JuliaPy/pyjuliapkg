@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 from subprocess import run
 from typing import Union
@@ -47,6 +48,16 @@ def save_meta(meta):
 
 ### RESOLVE
 
+_NOT_ASCII_RE = re.compile(r"[^\x00-\x80]")
+
+_JULIA_ASCII_ID_CHAR_RE = re.compile(r"[a-zA-Z0-9_!]")
+
+_JULIA_ASCII_ID_START_CHAR_RE = re.compile(r"[a-zA-Z_]")
+
+_UUID_RE = re.compile(
+    r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+)
+
 
 class PkgSpec:
     def __init__(
@@ -60,44 +71,84 @@ class PkgSpec:
         url: Union[str, None] = None,
         rev: Union[str, None] = None,
     ):
-        # Validate name (non-empty string)
-        if not isinstance(name, str) or not name.strip():
-            raise ValueError("name must be a non-empty string")
+        # Validate name: type then value
+        if not isinstance(name, str):
+            raise TypeError(
+                f"package name must be a 'str', got '{type(name).__name__}'"
+            )
+        if not name:
+            raise ValueError(f"package name cannot be empty, got {name!r}")
+        if name.endswith(".jl"):
+            raise ValueError(
+                f"package name cannot end with '.jl', got {name!r}, perhaps you meant"
+                f" {name.removesuffix('.jl')!r}"
+            )
+        # ascii-fied name (assume any non-ascii is fine)
+        asciiname = _NOT_ASCII_RE.sub("_", name)
+        invalid = _JULIA_ASCII_ID_CHAR_RE.sub("", asciiname)
+        if invalid:
+            raise ValueError(
+                f"package name contains invalid characters {invalid!r}, got {name!r}"
+            )
+        invalid = _JULIA_ASCII_ID_START_CHAR_RE.sub("", asciiname[0])
+        if invalid:
+            raise ValueError(
+                f"package name has invalid first character {invalid!r}, got {name!r}"
+            )
         self.name = name
 
-        # Validate UUID (non-empty string, could add more specific UUID validation)
-        if not isinstance(uuid, str) or not uuid.strip():
-            raise ValueError("uuid must be a non-empty string")
+        # Validate UUID: type then value (could add stricter UUID validation)
+        if not isinstance(uuid, str):
+            raise TypeError(
+                f"package uuid must be a 'str', got '{type(uuid).__name__}'"
+            )
+        if not _UUID_RE.match(uuid):
+            raise ValueError(
+                f"package uuid must be of form XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX, "
+                f"got {uuid!r}"
+            )
         self.uuid = uuid
 
         # Validate dev (boolean)
         if not isinstance(dev, bool):
-            raise TypeError("dev must be a boolean")
+            raise TypeError(f"package dev must be a 'bool', got '{type(dev).__name__}'")
         self.dev = dev
 
         # Validate version (string, Version, or None)
         if version is not None and not isinstance(version, (str, Version)):
-            raise TypeError("version must be a string, Version, or None")
+            raise TypeError(
+                "package version must be a 'str', 'Version', or 'None', got "
+                f"'{type(version).__name__}'"
+            )
         self.version = version
 
         # Validate path (string or None)
         if path is not None and not isinstance(path, str):
-            raise TypeError("path must be a string or None")
+            raise TypeError(
+                f"package path must be a 'str' or 'None', got '{type(path).__name__}'"
+            )
         self.path = path
 
         # Validate subdir (string or None)
         if subdir is not None and not isinstance(subdir, str):
-            raise TypeError("subdir must be a string or None")
+            raise TypeError(
+                f"package subdir must be a 'str' or 'None', got "
+                f"'{type(subdir).__name__}'"
+            )
         self.subdir = subdir
 
         # Validate url (string or None)
         if url is not None and not isinstance(url, str):
-            raise TypeError("url must be a string or None")
+            raise TypeError(
+                f"package url must be a 'str' or 'None', got '{type(url).__name__}'"
+            )
         self.url = url
 
         # Validate rev (string or None)
         if rev is not None and not isinstance(rev, str):
-            raise TypeError("rev must be a string or None")
+            raise TypeError(
+                f"package rev must be a 'str' or 'None', got '{type(rev).__name__}'"
+            )
         self.rev = rev
 
     def jlstr(self):
@@ -116,8 +167,8 @@ class PkgSpec:
         ans = {
             "name": self.name,
             "uuid": self.uuid,
-            "dev": self.dev,
-            "version": str(self.version),
+            "dev": self.dev or None,
+            "version": None if self.version is None else str(self.version),
             "path": self.path,
             "subdir": self.subdir,
             "url": self.url,
