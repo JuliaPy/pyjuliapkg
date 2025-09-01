@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.18 (2025-09-01)
 * Support editable dependencies from setuptools (experimental).
 * Add `update()` function.
 * Improved input validation.
