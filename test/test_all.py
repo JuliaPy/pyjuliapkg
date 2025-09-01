@@ -82,36 +82,39 @@ def test_add_rm():
 
         assert deps() is None
 
+        uuid1 = "00000000-0000-0000-0000-000000000001"
+        uuid2 = "00000000-0000-0000-0000-000000000002"
+
         juliapkg.add(
             "Example1",
             target=tdir,
-            uuid="0001",
+            uuid=uuid1,
         )
 
-        assert deps() == {"packages": {"Example1": {"uuid": "0001"}}}
+        assert deps() == {"packages": {"Example1": {"uuid": uuid1}}}
 
-        juliapkg.add("Example2", target=tdir, uuid="0002")
+        juliapkg.add("Example2", target=tdir, uuid=uuid2)
 
         assert deps() == {
-            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}}
+            "packages": {"Example1": {"uuid": uuid1}, "Example2": {"uuid": uuid2}}
         }
 
         juliapkg.require_julia("~1.5, 1.7", target=tdir)
 
         assert deps() == {
             "julia": "~1.5, ^1.7",
-            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}},
+            "packages": {"Example1": {"uuid": uuid1}, "Example2": {"uuid": uuid2}},
         }
 
         juliapkg.require_julia(None, target=tdir)
 
         assert deps() == {
-            "packages": {"Example1": {"uuid": "0001"}, "Example2": {"uuid": "0002"}}
+            "packages": {"Example1": {"uuid": uuid1}, "Example2": {"uuid": uuid2}}
         }
 
         juliapkg.rm("Example1", target=tdir)
 
-        assert deps() == {"packages": {"Example2": {"uuid": "0002"}}}
+        assert deps() == {"packages": {"Example2": {"uuid": uuid2}}}
 
 
 def test_editable_setuptools():
