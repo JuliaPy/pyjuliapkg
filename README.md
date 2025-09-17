@@ -55,6 +55,18 @@ Julia v1.*.* and the Example package v0.5.*:
 }
 ```
 
+### Command line interface
+
+You can also use the CLI, some examples:
+```sh
+python -m juliapkg --help
+python -m juliapkg add Example --uuid=7876af07-990d-54b4-ab0e-23690620f79a --version=0.5
+python -m juliapkg resolve
+python -m juliapkg status
+python -m juliapkg run -E 'using Example; Example.hello("world")'
+python -m juliapkg remove Example
+```
+
 ## Using Julia
 
 - `juliapkg.executable()` returns a compatible Julia executable.
