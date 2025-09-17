@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Improve some error messages.
+
 ## v0.1.18 (2025-09-01)
 * Support editable dependencies from setuptools (experimental).
 * Add `update()` function.
