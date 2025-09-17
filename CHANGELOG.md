@@ -1,9 +1,13 @@
 # Changelog
 
 ## Unreleased
+* Improve some error messages.
+
+## v0.1.18 (2025-09-01)
 * Support editable dependencies from setuptools (experimental).
 * Add `update()` function.
 * Improved input validation.
+* Require Python 3.9+.
 
 ## v0.1.17 (2025-05-13)
 * Respect `JULIAUP_DEPOT_PATH` when searching for Julia using juliaup.
