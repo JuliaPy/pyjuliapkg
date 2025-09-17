@@ -27,7 +27,10 @@ else:
 
         @property
         def always_show_python_error(self) -> bool:
-            return os.environ.get("JULIAPKG_ALWAYS_SHOW_PYTHON_ERROR_CLI", "0") == "1"
+            return (
+                os.environ.get("PYTHON_JULIAPKG_CLI_ALWAYS_SHOW_PYTHON_ERROR", "0")
+                == "1"
+            )
 
         @staticmethod
         def _is_graceful_exit(e: subprocess.CalledProcessError) -> bool:
