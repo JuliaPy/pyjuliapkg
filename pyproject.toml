@@ -11,9 +11,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 
-[project.scripts]
-pyjuliapkg = "juliapkg.cli:cli"
-
 [project.optional-dependencies]
 cli = ["click >=8.0,<9.0"]
 
