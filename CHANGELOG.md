@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+* Add the CLI.
 * Improve some error messages.
 
 ## v0.1.18 (2025-09-01)
