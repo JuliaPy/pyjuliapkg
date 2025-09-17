@@ -8,6 +8,19 @@ from .deps import STATE, add, resolve, rm, status, update
 
 try:
     import click
+except ImportError:
+    click = None
+
+if click is None:
+
+    def cli():
+        raise ImportError(
+            "`click` is required to use the juliapkg CLI. "
+            "Please install it with `pip install click` or "
+            '`pip install "pyjuliapkg[cli]".'
+        )
+
+else:
 
     class JuliaPkgGroup(click.Group):
         """Custom group to avoid long stacktraces when Julia exits with an error."""
@@ -119,15 +132,6 @@ try:
             cmd,
             check=True,
             env=env,
-        )
-
-except ImportError:
-
-    def cli():
-        raise ImportError(
-            "`click` is required to use the juliapkg CLI. "
-            "Please install it with `pip install click` or "
-            '`pip install "pyjuliapkg[cli]".'
         )
 
 
