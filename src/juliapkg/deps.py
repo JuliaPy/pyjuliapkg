@@ -373,7 +373,7 @@ def find_requirements():
                     "'{}' entries have empty intersection:\n{}".format(
                         k,
                         "\n".join(
-                            ["- {!r} at {}".format(v, f) for (f, v) in fvs.items()]
+                            ["- {!r} at {}".format(str(v), f) for (f, v) in fvs.items()]
                         ),
                     )
                 )
@@ -408,7 +408,9 @@ def find_requirements():
     if compat is not None and not compat:
         raise Exception(
             "'julia' compat entries have empty intersection:\n{}".format(
-                "\n".join(["- {!r} at {}".format(v, f) for (f, v) in compats.items()])
+                "\n".join(
+                    ["- {!r} at {}".format(str(v), f) for (f, v) in compats.items()]
+                )
             )
         )
     return compat, deps
