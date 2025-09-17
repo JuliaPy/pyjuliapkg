@@ -78,23 +78,17 @@ try:
         rm(package, target=target)
         click.echo(f"Queued removal of {package}. Run `resolve` to apply changes.")
 
-    cli.add_command(remove_cli, name="rm")
-
     @cli.command(name="status")
     @click.option("--target", help="Target environment")
     def status_cli(target):
         """Show the status of Julia packages in the project."""
         status(target=target)
 
-    cli.add_command(status_cli, name="st")
-
     @cli.command(name="update")
     @click.option("--dry-run", is_flag=True, help="Dry run (don't actually install)")
     def update_cli(dry_run):
         """Update Julia packages in the project."""
         update(dry_run=dry_run)
-
-    cli.add_command(update_cli, name="up")
 
     @cli.command(name="run", context_settings=dict(ignore_unknown_options=True))
     @click.argument("args", nargs=-1)
@@ -126,8 +120,6 @@ try:
             check=True,
             env=env,
         )
-
-    cli.add_command(run_cli, name="repl")
 
 except ImportError:
 
