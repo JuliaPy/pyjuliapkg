@@ -27,8 +27,8 @@ class TestCLI:
         result = runner.invoke(cli, [])
         assert "Usage:" in result.output
 
-    def test_repl_with_project(self, runner):
-        result = runner.invoke(cli, ["repl", "--project=/tmp/test"])
+    def test_run_with_project(self, runner):
+        result = runner.invoke(cli, ["run", "--project=/tmp/test"])
         assert result.exit_code != 0
         assert "Do not specify --project when using pyjuliapkg" in str(result.exception)
 
