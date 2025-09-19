@@ -7,6 +7,7 @@ import sys
 from subprocess import run
 from typing import Union
 
+import tomlkit
 from filelock import FileLock
 
 from .compat import Compat, Version
@@ -471,25 +472,51 @@ def resolve(force=False, dry_run=False, update=False):
         )
         log(f"Using Julia {ver} at {exe}")
         # set up the project
-        log(f"Using Julia project at {project}")
+        shared = STATE["project_is_shared"]
+        log(f"Using {'shared ' if shared else ''}Julia project at {project}")
         if not STATE["offline"]:
-            # write a Project.toml specifying UUIDs and compatibility of required
-            # packages
-            projtoml = []
-            projtoml.append("[deps]")
-            projtoml.extend(f'{pkg.name} = "{pkg.uuid}"' for pkg in pkgs)
-            projtoml.append("[compat]")
-            projtoml.extend(
-                f'{pkg.name} = "{pkg.version}"' for pkg in pkgs if pkg.version
+            # load the existing Project.toml if the project is shared
+            projtoml = None
+            foundprojtoml = False
+            if shared:
+                for fn in ["JuliaProject.toml", "Project.toml"]:
+                    projfile = os.path.join(project, fn)
+                    if os.path.isfile(projfile):
+                        with open(projfile) as fp:
+                            projtoml = tomlkit.load(fp)
+                            foundprojtoml = True
+                        break
+            # otherwise we start with a blank document
+            if not foundprojtoml:
+                projfile = os.path.join(project, "Project.toml")
+                projtoml = tomlkit.document()
+            # add/update the deps table
+            projdeps = projtoml.setdefault("deps", tomlkit.table())
+            for pkg in pkgs:
+                projdeps[pkg.name] = pkg.uuid
+            # add/update the compat table
+            projcompat = projtoml.setdefault("compat", tomlkit.table())
+            for pkg in pkgs:
+                if pkg.version:
+                    projcompat[pkg.name] = pkg.version
+                else:
+                    projcompat.pop(pkg.name, None)
+            # write it out
+            projtomlstr = tomlkit.dumps(projtoml)
+            log_script(
+                projtomlstr.splitlines(),
+                ("Updating" if foundprojtoml else "Writing")
+                + " "
+                + os.path.basename(projfile)
+                + ":",
             )
-            log_script(projtoml, "Writing Project.toml:")
-            with open(os.path.join(project, "Project.toml"), "wt") as fp:
-                for line in projtoml:
-                    print(line, file=fp)
+            with open(projfile, "wt") as fp:
+                fp.write(projtomlstr)
             # remove Manifest.toml
-            manifest_path = os.path.join(project, "Manifest.toml")
-            if os.path.exists(manifest_path):
-                os.remove(manifest_path)
+            if not shared:
+                manifest_path = os.path.join(project, "Manifest.toml")
+                if os.path.exists(manifest_path):
+                    os.remove(manifest_path)
             # install the packages
             dev_pkgs = [pkg for pkg in pkgs if pkg.dev]
             add_pkgs = [pkg for pkg in pkgs if not pkg.dev]
