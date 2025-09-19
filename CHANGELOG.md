@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* The UUID is no longer required when adding a dependency.
+
 ## v0.1.19 (2025-09-17)
 * Add the CLI.
 * Improve some error messages.

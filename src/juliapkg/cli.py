@@ -54,7 +54,7 @@ else:
 
     @cli.command(name="add")
     @click.argument("package")
-    @click.option("--uuid", required=True, help="UUID of the package")
+    @click.option("--uuid", help="UUID of the package")
     @click.option("--version", help="Version constraint")
     @click.option("--dev", is_flag=True, help="Add as development dependency")
     @click.option("--path", help="Local path to package")

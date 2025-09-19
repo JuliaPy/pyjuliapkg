@@ -28,8 +28,8 @@ pip install juliapkg
 - `require_julia(version, target=None)` declares that you require the given version of
   Julia. The `version` is a Julia compat specifier, so `1.5` matches any `1.*.*` version at
   least `1.5`.
-- `add(pkg, uuid, dev=False, version=None, path=None, subdir=None, url=None, rev=None, target=None)`
-  adds a required package. Its name and UUID are required.
+- `add(pkg, uuid=None, dev=False, version=None, path=None, subdir=None, url=None, rev=None, target=None)`
+  adds a required package.
 - `rm(pkg, target=None)` remove a package.
 
 Note that these functions edit `juliapkg.json` but do not actually install anything until
@@ -60,7 +60,7 @@ Julia v1.*.* and the Example package v0.5.*:
 You can also use the CLI, some examples:
 ```sh
 python -m juliapkg --help
-python -m juliapkg add Example --uuid=7876af07-990d-54b4-ab0e-23690620f79a --version=0.5
+python -m juliapkg add Example --version=0.5
 python -m juliapkg resolve
 python -m juliapkg status
 python -m juliapkg run -E 'using Example; Example.hello("world")'
