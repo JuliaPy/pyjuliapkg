@@ -3,7 +3,11 @@ name = "juliapkg"
 version = "0.1.19"
 description = "Julia version manager and package manager"
 authors = [{ name = "Christopher Doris" }]
-dependencies = ["semver >=3.0,<4.0", "filelock >=3.16,<4.0"]
+dependencies = [
+    "semver >=3.0,<4.0",
+    "filelock >=3.16,<4.0",
+    "tomlkit >=0.13.3,<0.14",
+]
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [

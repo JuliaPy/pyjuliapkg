@@ -113,6 +113,10 @@ following strategies in order:
 
 More strategies may be added in a future release.
 
+If the project is explicitly specified (with `-X juliapkg-project` or
+`PYTHON_JULIAPKG_PROJECT`) then it is considered "shared" and dependencies will only
+ever be added, not removed.
+
 ### Adding Julia dependencies to Python packages
 
 JuliaPkg looks for `juliapkg.json` files in many locations, namely:

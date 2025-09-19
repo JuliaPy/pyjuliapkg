@@ -66,6 +66,7 @@ def reset_state():
         if not os.path.isabs(project):
             raise Exception(f"{project_key} must be an absolute path")
         STATE["project"] = project
+        STATE["project_is_shared"] = True
     else:
         if sys.prefix != sys.base_prefix:
             # definitely in a virtual environment
@@ -81,6 +82,7 @@ def reset_state():
         else:
             # in a virtual or conda environment
             STATE["project"] = os.path.abspath(os.path.join(prefix, "julia_env"))
+        STATE["project_is_shared"] = False
 
     # meta file
     STATE["prefix"] = os.path.join(STATE["project"], "pyjuliapkg")

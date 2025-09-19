@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+* If the project is explicitly specified, it is considered "shared" and existing
+  dependencies are never removed.
+
 ## v0.1.19 (2025-09-17)
 * Add the CLI.
 * Improve some error messages.
