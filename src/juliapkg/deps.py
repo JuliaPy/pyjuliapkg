@@ -13,6 +13,7 @@ from filelock import FileLock
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log, log_script
+from .registry import _find_uuid
 from .state import STATE
 
 logger = logging.getLogger("juliapkg")
@@ -719,7 +720,19 @@ def _add(deps, pkg, uuid=None, **kwargs):
         pkgs[pkg.name] = pkg.depsdict()
     elif isinstance(pkg, str):
         if uuid is None:
-            raise TypeError("uuid is required")
+            uuids = _find_uuid(pkg)
+            if len(uuids) == 0:
+                raise TypeError(
+                    f"Could not find package '{pkg}' in any registry. Are you sure the "
+                    "name is correct? If so, pass the UUID explicitly."
+                )
+            elif len(uuids) == 1:
+                uuid = list(uuids.keys())[0]
+            else:
+                raise TypeError(
+                    f"Multiple UUIDs found for '{pkg}' ({uuids}), pass the UUID "
+                    "explicitly to specify."
+                )
         pkg = PkgSpec(pkg, uuid, **kwargs)
         _add(deps, pkg)
     else:
