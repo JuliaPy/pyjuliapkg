@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.20 (2025-09-19)
 * The UUID is no longer required when adding a dependency.
 * If the project is explicitly specified, it is considered "shared" and existing
   dependencies are never removed.
