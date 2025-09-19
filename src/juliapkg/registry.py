@@ -1,7 +1,8 @@
 import os
 import tarfile
 
-import tomllib
+# we can switch to tomllib when we require python 3.11+
+import tomli
 
 
 def _find_registries():
@@ -16,7 +17,7 @@ def _find_registries():
             if fn.endswith(".toml"):
                 regmetafile = os.path.join(regdir, fn)
                 with open(regmetafile, "rb") as fp:
-                    regmeta = tomllib.load(fp)
+                    regmeta = tomli.load(fp)
                 regmeta["path"] = os.path.join(regdir, regmeta["path"])
                 registries.append(regmeta)
     return registries
@@ -37,10 +38,10 @@ def _load_registry_index(reg):
         raise ValueError(f"registry does not exist: {regpath}")
     if regpath.endswith(".tar.gz"):
         with tarfile.open(regpath) as reg:
-            regidx = tomllib.load(reg.extractfile("Registry.toml"))
+            regidx = tomli.load(reg.extractfile("Registry.toml"))
     elif os.path.isdir(regpath):
         with open(os.path.join(regpath, "Registry.toml"), "rb") as fp:
-            regidx = tomllib.load(fp)
+            regidx = tomli.load(fp)
     else:
         raise ValueError(f"unsupported registry type: {regpath}")
     _REGISTRY_INDEX_CACHE[reghash] = regidx
