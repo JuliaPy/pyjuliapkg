@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.22 (2025-10-08)
+* Bug fixes.
+
 ## v0.1.21 (2025-10-08)
 * Improve OpenSSL compatibility - if Python has OpenSSL <3.5, restrict to Julia <1.12.
 

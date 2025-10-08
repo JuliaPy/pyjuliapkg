@@ -348,7 +348,8 @@ def find_requirements():
             ):
                 oc, jc = openssl_compat()
                 dep["version"][fn] = oc
-                compats[fn + " (OpenSSL_jll)"] = Compat.parse(jc)
+                if jc is not None:
+                    compats[fn + " (OpenSSL_jll)"] = Compat.parse(jc)
         c = deps.get("julia")
         if c is not None:
             compats[fn] = Compat.parse(c)
