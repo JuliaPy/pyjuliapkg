@@ -5,12 +5,17 @@ from juliapkg.deps import PkgSpec
 
 
 def test_openssl_compat():
-    assert juliapkg.deps.openssl_compat((1, 2, 3)) == "1.2 - 1.2.3"
-    assert juliapkg.deps.openssl_compat((2, 3, 4)) == "2.3 - 2.3.4"
-    assert juliapkg.deps.openssl_compat((3, 0, 0)) == "3 - 3.0"
-    assert juliapkg.deps.openssl_compat((3, 1, 0)) == "3 - 3.1"
-    assert juliapkg.deps.openssl_compat((3, 1, 2)) == "3 - 3.1"
-    assert isinstance(juliapkg.deps.openssl_compat(), str)
+    assert juliapkg.deps.openssl_compat((1, 2, 3)) == ("1.2 - 1.2.3", "1 - 1.11")
+    assert juliapkg.deps.openssl_compat((2, 3, 4)) == ("2.3 - 2.3.4", "1 - 1.11")
+    assert juliapkg.deps.openssl_compat((3, 0, 0)) == ("3 - 3.0", "1 - 1.11")
+    assert juliapkg.deps.openssl_compat((3, 1, 0)) == ("3 - 3.1", "1 - 1.11")
+    assert juliapkg.deps.openssl_compat((3, 1, 2)) == ("3 - 3.1", "1 - 1.11")
+    assert juliapkg.deps.openssl_compat((3, 5, 0)) == ("3 - 3.5", None)
+    c = juliapkg.deps.openssl_compat()
+    assert isinstance(c, tuple)
+    assert len(c) == 2
+    assert isinstance(c[0], str)
+    assert c[1] is None or isinstance(c[1], str)
 
 
 def test_pkgspec_validation():
