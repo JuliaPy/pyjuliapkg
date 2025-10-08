@@ -309,9 +309,15 @@ def openssl_compat(version=None):
 
     major, minor, patch = version[:3]
     if major >= 3:
-        return f"{major} - {major}.{minor}"
+        compat = f"{major} - {major}.{minor}"
     else:
-        return f"{major}.{minor} - {major}.{minor}.{patch}"
+        compat = f"{major}.{minor} - {major}.{minor}.{patch}"
+    if (major, minor) < (3, 5):
+        # julia 1.12 requires openssl 3.5
+        julia_compat = "1 - 1.11"
+    else:
+        julia_compat = None
+    return compat, julia_compat
 
 
 def find_requirements():
@@ -340,7 +346,9 @@ def find_requirements():
                 and dep.get("uuid").get(fn) == "458c3c95-2e84-50aa-8efc-19380b2a3a95"
                 and dep.get("version").get(fn) == "<=python"
             ):
-                dep["version"][fn] = openssl_compat()
+                oc, jc = openssl_compat()
+                dep["version"][fn] = oc
+                compats[fn + " (OpenSSL_jll)"] = Compat.parse(jc)
         c = deps.get("julia")
         if c is not None:
             compats[fn] = Compat.parse(c)
