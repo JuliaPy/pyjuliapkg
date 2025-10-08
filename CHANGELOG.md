@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.21 (2025-10-08)
+* Improve OpenSSL compatibility - if Python has OpenSSL <3.5, restrict to Julia <1.12.
+
 ## v0.1.20 (2025-09-19)
 * The UUID is no longer required when adding a dependency.
 * If the project is explicitly specified, it is considered "shared" and existing
