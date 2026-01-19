@@ -6,7 +6,7 @@ authors = [{ name = "Christopher Doris" }]
 dependencies = [
     "semver >=3.0,<4.0",
     "filelock >=3.16,<4.0",
-    "tomlkit >=0.13.3,<0.14",
+    "tomlkit >=0.13.3,<0.15",
     "tomli >=2.0,<3.0",
 ]
 readme = "README.md"
