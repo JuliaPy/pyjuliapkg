@@ -192,7 +192,10 @@ def ju_find_julia_noinstall(compat=None):
                 continue
             ver = Version(ver.major, ver.minor, ver.patch)
             if compat is None or ver in compat:
-                if "Path" in info:
+                if "BinaryPath" in info:
+                    exe = os.path.abspath(os.path.join(judir, info["BinaryPath"]))
+                    versions.append((exe, ver))
+                elif "Path" in info:
                     ext = ".exe" if os.name == "nt" else ""
                     exe = os.path.abspath(
                         os.path.join(judir, info["Path"], "bin", "julia" + ext)
