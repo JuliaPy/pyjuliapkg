@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.23 (2026-02-16)
 * Compat fix for juliaup 1.19.8.
 
 ## v0.1.22 (2025-10-08)

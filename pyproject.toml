@@ -1,6 +1,6 @@
 [project]
 name = "juliapkg"
-version = "0.1.22"
+version = "0.1.23"
 description = "Julia version manager and package manager"
 authors = [{ name = "Christopher Doris" }]
 dependencies = [
