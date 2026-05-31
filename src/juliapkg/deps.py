@@ -21,6 +21,11 @@ logger = logging.getLogger("juliapkg")
 ### META
 
 # increment whenever the format changes
+# 1 - initial version
+# 2 - added offline mode support (added 'offline' field to meta)
+# 3 - added override_executable support (added 'override_executable' field to meta)
+# 4 - changed from timestamp/sys_path to deps_files tracking
+# 5 - added hash_sha256 to deps_files for content verification
 META_VERSION = 5
 
 
