@@ -638,16 +638,31 @@ def run_julia(script, executable=None, project=None):
 
 
 def executable():
+    """
+    The path of the julia executable.
+
+    Dependencies are resolved first.
+    """
     resolve()
     return STATE["executable"]
 
 
 def project():
+    """
+    The path of the julia project.
+
+    Dependencies are resolved first, so the project will be instantiated.
+    """
     resolve()
     return STATE["project"]
 
 
 def libjulia():
+    """
+    The path of the libjulia library.
+    
+    Dependencies are resolved first.
+    """
     resolve()
     return STATE["libjulia"]
 
