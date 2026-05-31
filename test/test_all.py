@@ -14,6 +14,7 @@ def test_import():
     juliapkg.add
     juliapkg.rm
     juliapkg.executable
+    juliapkg.libjulia
     juliapkg.project
     juliapkg.offline
     juliapkg.require_julia
@@ -55,7 +56,14 @@ def test_executable():
     exe = juliapkg.executable()
     assert isinstance(exe, str)
     assert os.path.isfile(exe)
-    assert "julia" in exe.lower()
+    assert os.path.basename(exe).lower() in ("julia", "julia.exe")
+
+
+def test_libjulia():
+    lib = juliapkg.libjulia()
+    assert isinstance(lib, str)
+    assert os.path.isfile(lib)
+    assert os.path.basename(lib).lower().startswith("libjulia.")
 
 
 def test_project():
