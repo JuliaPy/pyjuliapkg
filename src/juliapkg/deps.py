@@ -660,7 +660,7 @@ def project():
 def libjulia():
     """
     The path of the libjulia library.
-    
+
     Dependencies are resolved first.
     """
     resolve()
