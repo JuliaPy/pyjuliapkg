@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Add `libjulia()` function.
+
 ## v0.1.23 (2026-02-16)
 * Compat fix for juliaup 1.19.8.
 
