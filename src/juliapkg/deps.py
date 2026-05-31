@@ -20,13 +20,15 @@ logger = logging.getLogger("juliapkg")
 
 ### META
 
-# increment whenever the format changes
+# Meta format version history:
 # 1 - initial version
 # 2 - added offline mode support (added 'offline' field to meta)
 # 3 - added override_executable support (added 'override_executable' field to meta)
 # 4 - changed from timestamp/sys_path to deps_files tracking
 # 5 - added hash_sha256 to deps_files for content verification
-META_VERSION = 5
+# 6 - added libjulia path to meta
+# increment whenever the format changes
+META_VERSION = 6
 
 
 def load_meta():
@@ -472,9 +474,10 @@ def resolve(force=False, dry_run=False, update=False):
         if not force:
             deps = can_skip_resolve()
             if deps:
-                STATE["resolved"] = True
                 STATE["executable"] = deps["executable"]
                 STATE["version"] = Version.parse(deps["version"])
+                STATE["libjulia"] = deps["libjulia"]
+                STATE["resolved"] = True
                 return True
         if dry_run:
             return False
@@ -486,6 +489,24 @@ def resolve(force=False, dry_run=False, update=False):
             compat=compat, prefix=STATE["install"], install=True, upgrade=True
         )
         log(f"Using Julia {ver} at {exe}")
+        # get libjulia path
+        libjulia_script = [
+            "using Libdl",
+            'print(abspath(Libdl.dlpath("libjulia")))',
+        ]
+        log_script(libjulia_script, "Finding libjulia:")
+        libjulia = run(
+            [
+                exe,
+                "--project=" + project,
+                "--startup-file=no",
+                "-e",
+                "\n".join(libjulia_script),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
         # set up the project
         shared = STATE["project_is_shared"]
         log(f"Using {'shared ' if shared else ''}Julia project at {project}")
@@ -561,6 +582,7 @@ def resolve(force=False, dry_run=False, update=False):
                 "dev": STATE["dev"],
                 "version": str(ver),
                 "executable": exe,
+                "libjulia": libjulia,
                 "deps_files": {
                     filename: {
                         "timestamp": os.path.getmtime(filename),
@@ -576,6 +598,7 @@ def resolve(force=False, dry_run=False, update=False):
         STATE["resolved"] = True
         STATE["executable"] = exe
         STATE["version"] = ver
+        STATE["libjulia"] = libjulia
         return True
     finally:
         lock.release()
@@ -622,6 +645,11 @@ def executable():
 def project():
     resolve()
     return STATE["project"]
+
+
+def libjulia():
+    resolve()
+    return STATE["libjulia"]
 
 
 def update(dry_run=False):
