@@ -20,7 +20,8 @@ logger = logging.getLogger("juliapkg")
 
 ### META
 
-META_VERSION = 5  # increment whenever the format changes
+# increment whenever the format changes
+META_VERSION = 5
 
 
 def load_meta():
@@ -548,6 +549,7 @@ def resolve(force=False, dry_run=False, update=False):
             log_script(script, "Installing packages:")
             run_julia(script, executable=exe, project=project)
         # record that we resolved
+        # increment META_VERSION when the meta format changes
         save_meta(
             {
                 "meta_version": META_VERSION,
