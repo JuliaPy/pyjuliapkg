@@ -1,0 +1,4 @@
+- Use `uv` for project management.
+  - `uv run python ...` to run python.
+  - `uv run pytest` to run the tests.
+  - `uv run pre-commit` to run lint checks.

@@ -137,6 +137,46 @@ def test_pkgspec_preferences():
     assert spec.depsdict()["preferences"] == {}
 
 
+def test_run_script(monkeypatch):
+    call = {}
+    result = object()
+
+    def run(command, **kwargs):
+        call["command"] = command
+        call["kwargs"] = kwargs
+        return result
+
+    monkeypatch.setattr(juliapkg.deps, "run", run)
+    env = {"EXAMPLE": "yes"}
+
+    actual = juliapkg.deps.run_script(
+        ["line one", "line two"],
+        executable="/bin/julia",
+        project="/project",
+        julia_args=["--check-bounds=yes", "--threads=2"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert actual is result
+    assert call["command"] == [
+        "/bin/julia",
+        "--check-bounds=yes",
+        "--threads=2",
+        "--project=/project",
+        "--startup-file=no",
+        "-e",
+        "line one\nline two",
+    ]
+    assert call["kwargs"]["check"] is True
+    assert call["kwargs"]["capture_output"] is True
+    assert call["kwargs"]["text"] is True
+    assert call["kwargs"]["env"]["EXAMPLE"] == "yes"
+    assert call["kwargs"]["env"]["JULIA_PYTHONCALL_EXE"]
+    assert "JULIA_PYTHONCALL_EXE" not in env
+
+
 def _write_juliapkg_json(dirpath, packages):
     fn = os.path.join(dirpath, "juliapkg.json")
     with open(fn, "w") as fp:

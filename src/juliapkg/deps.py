@@ -476,7 +476,7 @@ def find_requirements():
     return compat, deps
 
 
-def resolve(force=False, dry_run=False, update=False):
+def resolve(force=False, dry_run=False, update=False, julia_args=None):
     """
     Resolve the dependencies.
 
@@ -484,6 +484,8 @@ def resolve(force=False, dry_run=False, update=False):
         force (bool): Force resolution.
         dry_run (bool): Dry run.
         update (bool): Update the dependencies.
+        julia_args: Additional command-line arguments for the Julia processes used to
+            resolve and precompile dependencies.
 
     Returns:
         bool: Whether the dependencies are resolved (always True unless dry_run is
@@ -536,15 +538,11 @@ def resolve(force=False, dry_run=False, update=False):
             'print(abspath(Libdl.dlpath("libjulia")))',
         ]
         log_script(libjulia_script, "Finding libjulia:")
-        libjulia = run(
-            [
-                exe,
-                "--project=" + project,
-                "--startup-file=no",
-                "-e",
-                "\n".join(libjulia_script),
-            ],
-            check=True,
+        libjulia = run_script(
+            libjulia_script,
+            executable=exe,
+            project=project,
+            julia_args=julia_args,
             capture_output=True,
             text=True,
         ).stdout.strip()
@@ -621,7 +619,12 @@ def resolve(force=False, dry_run=False, update=False):
                 script.append("Pkg.resolve()")
             script.append("Pkg.precompile()")
             log_script(script, "Installing packages:")
-            run_julia(script, executable=exe, project=project)
+            run_script(
+                script,
+                executable=exe,
+                project=project,
+                julia_args=julia_args,
+            )
         # record that we resolved
         # increment META_VERSION when the meta format changes
         save_meta(
@@ -652,7 +655,7 @@ def resolve(force=False, dry_run=False, update=False):
         lock.release()
 
 
-def run_julia(script, executable=None, project=None):
+def run_script(script, executable=None, project=None, julia_args=None, **kwargs):
     """
     Run a Julia script with the specified executable and project.
 
@@ -660,28 +663,39 @@ def run_julia(script, executable=None, project=None):
         executable (str): Path to the Julia executable.
         project (str): Path to the Julia project.
         script (list): List of strings representing the Julia script to run.
+        julia_args: Additional Julia command-line arguments.
+        **kwargs: Additional keyword arguments passed to subprocess.run.
     """
     if executable is None:
         executable = STATE["executable"]
     if project is None:
         project = STATE["project"]
 
-    env = os.environ.copy()
+    if julia_args is None:
+        julia_args = []
+
+    env = kwargs.pop("env", None)
+    if env is None:
+        env = os.environ.copy()
+    else:
+        env = env.copy()
     if sys.executable:
         # prefer PythonCall to use the current Python executable
         # TODO: this is a hack, it would be better for PythonCall to detect that
         #   Julia is being called from Python
         env.setdefault("JULIA_PYTHONCALL_EXE", sys.executable)
-    run(
+    kwargs.setdefault("check", True)
+    return run(
         [
             executable,
+            *julia_args,
             "--project=" + project,
             "--startup-file=no",
             "-e",
             "\n".join(script),
         ],
-        check=True,
         env=env,
+        **kwargs,
     )
 
 
