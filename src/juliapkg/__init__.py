@@ -2,6 +2,7 @@ from .deps import (
     PkgSpec,
     add,
     executable,
+    freeze,
     libjulia,
     offline,
     project,
@@ -15,6 +16,7 @@ from .deps import (
 __all__ = [
     "status",
     "resolve",
+    "freeze",
     "executable",
     "libjulia",
     "project",

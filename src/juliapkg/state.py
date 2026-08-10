@@ -93,6 +93,12 @@ def reset_state():
     # offline
     STATE["offline"], _ = get_config_bool("offline")
 
+    # pins: how to treat pinned versions from juliapkg.pinned.json files
+    # - prefer: use pinned versions wherever compatible, relax with a warning
+    # - strict: error instead of relaxing
+    # - ignore: do not use pins at all
+    STATE["pins"], _ = get_config_opts("pins", ("prefer", "strict", "ignore"), "prefer")
+
     # resolution
     STATE["resolved"] = False
 

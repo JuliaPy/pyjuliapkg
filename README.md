@@ -81,6 +81,7 @@ python -m juliapkg remove Example
 - `juliapkg.resolve(force=False, dry_run=False)` ensures all the dependencies are installed. You don't
   normally need to do this because the other functions resolve automatically.
 - `juliapkg.update(dry_run=False)` updates the dependencies.
+- `juliapkg.freeze(target=None)` pins the currently resolved package versions.
 
 ## Details
 
@@ -95,6 +96,7 @@ option to `python`. The `-X` option has higher precedence.
 | `PYTHON_JULIAPKG_EXE=<exe>` | `-X juliapkg-exe=<exe>` | The Julia executable to use. |
 | `PYTHON_JULIAPKG_PROJECT=<project>` | `-X juliapkg-project=<project>` | The Julia project where packages are installed. |
 | `PYTHON_JULIAPKG_OFFLINE=<yes/no>` | `-X juliapkg-offline=<yes/no>` | Work in Offline Mode - does not install Julia or any packages. |
+| `PYTHON_JULIAPKG_PINS=<prefer/strict/ignore>` | `-X juliapkg-pins=<prefer/strict/ignore>` | How to treat pinned versions from `juliapkg.pinned.json` files: prefer them where compatible (default), error if any cannot be honoured, or ignore them. |
 
 ### Which Julia gets used?
 
@@ -135,6 +137,19 @@ package, then JuliaPkg will find those dependencies and install them.
 
 You can use `add`, `rm` etc. above with `target='/path/to/your/package'` to modify the
 dependencies of your package.
+
+### Pinning versions
+
+`freeze(target)` (or `python -m juliapkg freeze --target=...`) records the exact version
+of every resolved package into a `juliapkg.pinned.json` file next to the `juliapkg.json`
+given by `target`. On subsequent resolves these versions are preferred wherever they are
+compatible with all requirements; conflicting pins are relaxed with a warning (see the
+`pins` option in Configuration to error instead, or to ignore pins). Ship this file with
+your Python package and your users get exactly the dependency versions you tested
+against. To upgrade: `update()` (which ignores pins), test, then `freeze()` again.
+
+Packages tracked by `path`, `url` or `rev` are not pinned (note a branch `rev` is not
+reproducible). Pinning requires Julia 1.4+.
 
 ### Offline mode
 

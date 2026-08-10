@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 
-from .deps import STATE, add, resolve, rm, status, update
+from .deps import STATE, add, freeze, resolve, rm, status, update
 
 try:
     import click
@@ -85,6 +85,18 @@ else:
         """Resolve and install Julia dependencies."""
         resolve(force=force, dry_run=dry_run, update=update)
         click.echo("Resolved dependencies.")
+
+    @cli.command(name="freeze")
+    @click.option("--target", help="Target environment")
+    def freeze_cli(target):
+        """Pin the currently resolved package versions.
+
+        Writes the exact version of every resolved package to a
+        juliapkg.pinned.json file next to the target juliapkg.json. These
+        versions are preferred on subsequent resolves wherever compatible.
+        """
+        fn = freeze(target=target)
+        click.echo(f"Wrote {fn}")
 
     @cli.command(name="remove")
     @click.argument("package")

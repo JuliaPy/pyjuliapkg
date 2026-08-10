@@ -18,6 +18,8 @@ from .state import STATE
 
 logger = logging.getLogger("juliapkg")
 
+PINNED_FILE_NAME = "juliapkg.pinned.json"
+
 ### META
 
 # Meta format version history:
@@ -27,8 +29,9 @@ logger = logging.getLogger("juliapkg")
 # 4 - changed from timestamp/sys_path to deps_files tracking
 # 5 - added hash_sha256 to deps_files for content verification
 # 6 - added libjulia path to meta
+# 7 - added pins mode and pinned files tracking
 # increment whenever the format changes
-META_VERSION = 7
+META_VERSION = 8
 
 
 def load_meta():
@@ -252,8 +255,12 @@ def can_skip_resolve():
     if isdev != STATE["dev"]:
         logger.debug("changed dev %s to %s", isdev, STATE["dev"])
         return False
+    # resolve whenever the pins mode changes
+    if deps.get("pins") != STATE["pins"]:
+        logger.debug("changed pins %s to %s", deps.get("pins"), STATE["pins"])
+        return False
     # resolve whenever any deps files change
-    files0 = set(deps_files())
+    files0 = set(tracked_files())
     files = deps["deps_files"]
     filesdiff = set(files.keys()).difference(files0)
     if filesdiff:
@@ -319,6 +326,83 @@ def deps_files():
             if os.path.isfile(fn)
         )
     )
+
+
+def pinned_files():
+    return sorted(
+        set(
+            fn
+            for fn in (
+                os.path.join(os.path.dirname(f), PINNED_FILE_NAME) for f in deps_files()
+            )
+            if os.path.isfile(fn)
+        )
+    )
+
+
+def tracked_files():
+    return sorted(set(deps_files()) | set(pinned_files()))
+
+
+def find_pins(pkgs, files=None, strict=False):
+    """Find pinned versions from juliapkg.pinned.json files.
+
+    Args:
+        pkgs (list): The required PkgSpecs, used to exclude packages whose source
+            is fixed some other way (dev, path, url, rev).
+        files (list): The pinned files to read (defaults to all discovered ones).
+        strict (bool): Raise on invalid or conflicting pins instead of warning.
+
+    Returns:
+        dict: name -> {"uuid": str, "version": str, "file": str}.
+    """
+    if files is None:
+        files = pinned_files()
+    unpinnable = {p.name for p in pkgs if p.dev or p.path or p.url or p.rev}
+    compats = {p.name: Compat.parse(str(p.version)) for p in pkgs if p.version}
+    pins = {}
+    for fn in sorted(files):
+        with open(fn) as fp:
+            data = json.load(fp)
+        for name, info in sorted(data.get("packages", {}).items()):
+            if name in unpinnable:
+                continue
+            try:
+                PkgSpec(name=name, uuid=info["uuid"], version=info["version"])
+                version = Version.parse(info["version"])
+            except (KeyError, TypeError, ValueError) as err:
+                msg = f"invalid pin for {name} at {fn}: {err}"
+                if strict:
+                    raise Exception(msg) from err
+                log(f"WARNING: ignoring {msg}")
+                continue
+            if name in compats and version not in compats[name]:
+                msg = (
+                    f"pin {name} = {info['version']} at {fn} conflicts with"
+                    f" the required compat {compats[name]}"
+                )
+                if strict:
+                    raise Exception(msg)
+                log(f"WARNING: ignoring {msg}")
+                continue
+            if name in pins:
+                prev = pins[name]
+                if (prev["uuid"], prev["version"]) != (info["uuid"], info["version"]):
+                    msg = (
+                        f"conflicting pins for {name}:"
+                        f" {prev['version']} ({prev['uuid']}) at {prev['file']},"
+                        f" {info['version']} ({info['uuid']}) at {fn}"
+                    )
+                    if strict:
+                        raise Exception(msg)
+                    log(f"WARNING: {msg}; keeping the first")
+                continue
+            pins[name] = {
+                "uuid": info["uuid"],
+                "version": info["version"],
+                "file": fn,
+            }
+    return pins
 
 
 def openssl_compat(version=None):
@@ -476,6 +560,73 @@ def find_requirements():
     return compat, deps
 
 
+def _install_script(dev_pkgs, add_pkgs, pins, strict, update):
+    script = ["import Pkg", "Pkg.Registry.update()"]
+    if pins:
+        # seed the environment with the pinned versions, so that the subsequent
+        # Pkg.add preserves them wherever they are compatible
+        script.append("pins = Pkg.PackageSpec[")
+        for name in sorted(pins):
+            info = pins[name]
+            script.append(
+                f'  Pkg.PackageSpec(name="{name}", uuid="{info["uuid"]}",'
+                f' version="{info["version"]}"),'
+            )
+        script.append("]")
+        # snapshot the direct dependencies so that only packages added by the
+        # seeding below get removed again (shared projects may have others)
+        script.append("predeps = Set(keys(Pkg.project().dependencies))")
+        script.append("Pkg.add(pins)")
+    if dev_pkgs:
+        script.append("Pkg.develop([")
+        for pkg in dev_pkgs:
+            script.append(f"  {pkg.jlstr()},")
+        script.append("])")
+    if add_pkgs:
+        script.append("Pkg.add([")
+        for pkg in add_pkgs:
+            script.append(f"  {pkg.jlstr()},")
+        script.append("])")
+    if pins:
+        # pins are not direct dependencies: remove them from the project again,
+        # which also prunes any that are not needed
+        required = sorted(
+            {pkg.name for pkg in dev_pkgs} | {pkg.name for pkg in add_pkgs}
+        )
+        script.append(
+            "keep = String[" + ", ".join(f'"{name}"' for name in required) + "]"
+        )
+        script.append(
+            "rmnames = setdiff!(intersect!([p.name for p in pins],"
+            " keys(Pkg.project().dependencies)), keep, predeps)"
+        )
+        script.append("isempty(rmnames) || Pkg.rm(rmnames)")
+        # report any pins that did not survive resolution
+        script.append(
+            "vers = Dict(d.name => string(d.version)"
+            " for d in values(Pkg.dependencies()) if d.version !== nothing)"
+        )
+        script.append(
+            'relaxed = sort!([string(p.name, ": pinned ", p.version, ", resolved ",'
+            " vers[p.name]) for p in pins"
+            " if get(vers, p.name, string(p.version)) != string(p.version)])"
+        )
+        msg = (
+            'string("JuliaPkg: pinned versions were relaxed to satisfy'
+            ' compatibility:\\n  ", join(relaxed, "\\n  "))'
+        )
+        if strict:
+            script.append(f"isempty(relaxed) || error({msg})")
+        else:
+            script.append(f"isempty(relaxed) || @warn {msg}")
+    if update:
+        script.append("Pkg.update()")
+    else:
+        script.append("Pkg.resolve()")
+    script.append("Pkg.precompile()")
+    return script
+
+
 def resolve(force=False, dry_run=False, update=False):
     """
     Resolve the dependencies.
@@ -604,22 +755,19 @@ def resolve(force=False, dry_run=False, update=False):
             # install the packages
             dev_pkgs = [pkg for pkg in pkgs if pkg.dev]
             add_pkgs = [pkg for pkg in pkgs if not pkg.dev]
-            script = ["import Pkg", "Pkg.Registry.update()"]
-            if dev_pkgs:
-                script.append("Pkg.develop([")
-                for pkg in dev_pkgs:
-                    script.append(f"  {pkg.jlstr()},")
-                script.append("])")
-            if add_pkgs:
-                script.append("Pkg.add([")
-                for pkg in add_pkgs:
-                    script.append(f"  {pkg.jlstr()},")
-                script.append("])")
-            if update:
-                script.append("Pkg.update()")
+            # find pinned versions (updating ignores pins so they can be refreshed
+            # with freeze() afterwards)
+            if update or STATE["pins"] == "ignore":
+                pins = {}
             else:
-                script.append("Pkg.resolve()")
-            script.append("Pkg.precompile()")
+                pins = find_pins(pkgs, strict=STATE["pins"] == "strict")
+            if pins and ver < Version.parse("1.4.0"):
+                # the generated pins code uses Pkg.project()/Pkg.dependencies()
+                log("WARNING: version pins require Julia 1.4+, ignoring pins")
+                pins = {}
+            script = _install_script(
+                dev_pkgs, add_pkgs, pins, STATE["pins"] == "strict", update
+            )
             log_script(script, "Installing packages:")
             run_julia(script, executable=exe, project=project)
         # record that we resolved
@@ -636,11 +784,12 @@ def resolve(force=False, dry_run=False, update=False):
                         "timestamp": os.path.getmtime(filename),
                         "hash_sha256": _get_hash(filename),
                     }
-                    for filename in deps_files()
+                    for filename in tracked_files()
                 },
                 "pkgs": [pkg.dict() for pkg in pkgs],
                 "offline": bool(STATE["offline"]),
                 "override_executable": STATE["override_executable"],
+                "pins": STATE["pins"],
             }
         )
         STATE["resolved"] = True
@@ -866,6 +1015,77 @@ def _rm(deps, pkg):
     else:
         for p in pkg:
             _rm(deps, p)
+
+
+def _pins_from_manifest(manifest):
+    deps = manifest.get("deps")
+    if deps is None:
+        # manifest format 1 has the packages at the top level
+        deps = {k: v for (k, v) in manifest.items() if isinstance(v, list)}
+    pins = {}
+    for name, entries in deps.items():
+        if len(entries) != 1:
+            log(f"WARNING: not pinning {name}: multiple packages with this name")
+            continue
+        entry = entries[0]
+        if "path" in entry or "repo-url" in entry:
+            # dev/path/url packages are already pinned by their source
+            continue
+        if "git-tree-sha1" not in entry or "version" not in entry:
+            # stdlibs cannot be pinned
+            continue
+        pins[name] = {"uuid": str(entry["uuid"]), "version": str(entry["version"])}
+    return pins
+
+
+def freeze(target=None):
+    """
+    Pin the currently resolved package versions.
+
+    Resolves the dependencies, then records the exact version of every package in
+    the resolved manifest into a juliapkg.pinned.json file next to the juliapkg.json
+    file given by target. On subsequent resolves, these versions are preferred
+    wherever they are compatible with all requirements.
+
+    Args:
+        target (str): Where to write the pins, as for add(). Typically the
+            directory of the package whose dependencies you are pinning.
+
+    Returns:
+        str: The path of the written file.
+    """
+    deps_fn = cur_deps_file(target=target)
+    if not os.path.isfile(deps_fn):
+        raise Exception(
+            f"no dependencies file at {deps_fn}: pinned files are only used when"
+            " next to a juliapkg.json, so add dependencies first or pass a"
+            " different target"
+        )
+    resolve()
+    project = STATE["project"]
+    # version-specific manifests take precedence when they exist
+    ver = STATE["version"]
+    names = [
+        f"JuliaManifest-v{ver.major}.{ver.minor}.toml",
+        f"Manifest-v{ver.major}.{ver.minor}.toml",
+        "JuliaManifest.toml",
+        "Manifest.toml",
+    ]
+    for fn in names:
+        manifest_path = os.path.join(project, fn)
+        if os.path.isfile(manifest_path):
+            break
+    else:
+        raise Exception(f"no manifest found at {project}, cannot freeze")
+    with open(manifest_path) as fp:
+        manifest = tomlkit.load(fp)
+    pins = _pins_from_manifest(manifest)
+    fn = os.path.join(os.path.dirname(deps_fn), PINNED_FILE_NAME)
+    with open(fn, "w") as fp:
+        json.dump({"packages": pins}, fp, indent=2, sort_keys=True)
+        fp.write("\n")
+    STATE["resolved"] = False
+    return fn
 
 
 def offline(value=True):

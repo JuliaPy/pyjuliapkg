@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+* Add version pinning: `freeze()` records resolved versions to `juliapkg.pinned.json`,
+  which are preferred on subsequent resolves wherever compatible.
+
 ## v0.1.25 (2026-08-07)
 * Add preferences support.
 
