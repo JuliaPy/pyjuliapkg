@@ -21,7 +21,7 @@ def julia_version(exe):
         pass
 
 
-def find_julia(compat=None, prefix=None, install=False, upgrade=False):
+def find_julia(compat=None, prefix=None, install=False, upgrade=False, system=True):
     """Find a Julia executable compatible with compat.
 
     Args:
@@ -30,6 +30,8 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
         install: If True, install Julia if it is not found. This will use JuliaUp if
             available, otherwise will install into the given prefix.
         upgrade: If True, find the latest compatible release. Implies install=True.
+        system: If False, skip JuliaUp and PATH. A configured executable is checked
+            first and still wins; otherwise only the given prefix is used.
 
     As a special case, upgrade=True does not apply when Julia is found in the PATH,
     because if it is already installed then the user is already managing their own Julia
@@ -66,8 +68,8 @@ def find_julia(compat=None, prefix=None, install=False, upgrade=False):
                 if bestcompat is None or pr_ver in bestcompat:
                     return (pr_exe, pr_ver)
     # see if juliaup is installed
-    try_jl = True
-    ju_exe = shutil.which("juliaup")
+    try_jl = system
+    ju_exe = shutil.which("juliaup") if system else None
     if ju_exe:
         ju_compat = (
             Compat.parse("=" + ju_best_julia_version(compat)[0]) if upgrade else compat

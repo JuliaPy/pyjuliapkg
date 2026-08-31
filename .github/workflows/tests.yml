@@ -40,3 +40,41 @@ jobs:
         uses: codecov/codecov-action@v7
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  embedded:
+    name: Embedded (${{ matrix.os }}, py ${{ matrix.pair.pyversion }}, julia ${{ matrix.pair.julia }}, py-tls-context-first ${{ matrix.sslfirst }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        pair:
+          - {pyversion: "3.10", julia: "~1.12"}
+          - {pyversion: "3.14", julia: "~1.10"}
+        sslfirst: ["1", "0"]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python ${{ matrix.pair.pyversion }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.pair.pyversion }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . juliacall
+      - name: Remove Chocolatey Julia shim from PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $chocolateyBin = [IO.Path]::TrimEndingDirectorySeparator(
+            [IO.Path]::GetFullPath('C:\ProgramData\Chocolatey\bin'))
+          $pathEntries = $env:PATH -split [IO.Path]::PathSeparator | Where-Object {
+            [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($_)) -ine $chocolateyBin
+          }
+          "PATH=$($pathEntries -join [IO.Path]::PathSeparator)" >> $env:GITHUB_ENV
+      - name: Embedded session with mismatched OpenSSL
+        run: python test/embedded_openssl.py
+        env:
+          JULIAPKG_TEST_JULIA: ${{ matrix.pair.julia }}
+          JULIAPKG_TEST_SSL_FIRST: ${{ matrix.sslfirst }}
+          PYTHONFAULTHANDLER: "1"

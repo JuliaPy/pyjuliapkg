@@ -10,6 +10,7 @@ from typing import Union
 import tomlkit
 from filelock import FileLock
 
+from . import openssl
 from .compat import Compat, Version
 from .find_julia import find_julia, julia_version
 from .install_julia import log, log_script
@@ -27,8 +28,10 @@ logger = logging.getLogger("juliapkg")
 # 4 - changed from timestamp/sys_path to deps_files tracking
 # 5 - added hash_sha256 to deps_files for content verification
 # 6 - added libjulia path to meta
+# 8 - Julia's OpenSSL is renamed after installation, so a project resolved by an earlier
+#     version has an install that was never renamed and a cap that no longer applies
 # increment whenever the format changes
-META_VERSION = 7
+META_VERSION = 8
 
 
 def load_meta():
@@ -347,6 +350,8 @@ def find_requirements():
 
     compats = {}
     all_deps = {}
+    python_openssl_bounds = set()
+    python_openssl_compat = None
     for fn in deps_files():
         log("Found dependencies: {}".format(fn))
         with open(fn) as fp:
@@ -360,16 +365,15 @@ def find_requirements():
                         os.path.normpath(os.path.join(os.path.dirname(fn), v))
                     )
                 dep.setdefault(k, {})[fn] = v
-            # special handling of `verion = "<=python"` for `OpenSSL_jll
             if (
                 name == "OpenSSL_jll"
-                and dep.get("uuid").get(fn) == "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-                and dep.get("version").get(fn) == "<=python"
+                and dep.get("uuid", {}).get(fn) == _OPENSSL_JLL_UUID
+                and dep.get("version", {}).get(fn) == "<=python"
             ):
-                oc, jc = openssl_compat()
-                dep["version"][fn] = oc
-                if jc is not None:
-                    compats[fn + " (OpenSSL_jll)"] = Compat.parse(jc)
+                python_openssl_bounds.add(fn)
+                if python_openssl_compat is None:
+                    python_openssl_compat = openssl_compat()[0]
+                dep["version"][fn] = python_openssl_compat
         c = deps.get("julia")
         if c is not None:
             compats[fn] = Compat.parse(c)
@@ -449,6 +453,7 @@ def find_requirements():
     deps = []
     for name, kfvs in all_deps.items():
         kw = {"name": name}
+        version_files = set(kfvs.get("version", {}))
         merge_unique(kw, kfvs, "uuid")
         merge_unique(kw, kfvs, "path")
         merge_unique(kw, kfvs, "subdir")
@@ -457,7 +462,14 @@ def find_requirements():
         merge_compat(kw, kfvs, "version")
         merge_any(kw, kfvs, "dev")
         merge_preferences(kw, kfvs, "preferences")
-        deps.append(PkgSpec(**kw))
+        pkg = PkgSpec(**kw)
+        pkg._openssl_python_bound = (
+            name == "OpenSSL_jll"
+            and pkg.uuid == _OPENSSL_JLL_UUID
+            and bool(version_files)
+            and version_files <= python_openssl_bounds
+        )
+        deps.append(pkg)
     # julia compat
     compat = None
     for c in compats.values():
@@ -474,6 +486,86 @@ def find_requirements():
             )
         )
     return compat, deps
+
+
+_OPENSSL_JLL_UUID = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
+
+
+def _installed_by_juliapkg(exe):
+    install = os.path.realpath(STATE["install"])
+    exe = os.path.realpath(exe)
+    try:
+        return os.path.commonpath((install, exe)) == install
+    except ValueError:
+        return False
+
+
+def _shield_julia(exe, ver, *, owned):
+    safe, note = openssl.shield(exe, ver, owned=owned)
+    log(f"Julia's OpenSSL: {note}")
+    return safe
+
+
+def _drop_generated_openssl_bound(pkgs, ver):
+    for pkg in pkgs:
+        if getattr(pkg, "_openssl_python_bound", False):
+            log(f"Dropping the '<=python' bound on {pkg.name}; Julia {ver} pins it")
+            pkg.version = None
+
+
+def _reconcile_openssl(exe, ver, compat, pkgs):
+    """Use a private OpenSSL name or select a compatible Julia."""
+    if (ver.major, ver.minor) < (1, 12):
+        return exe, ver
+
+    _, python_cap = openssl_compat()
+    owned = _installed_by_juliapkg(exe)
+    safe = _shield_julia(exe, ver, owned=owned)
+    compatible_foreign = (
+        not owned
+        and sys.platform.startswith("linux")
+        and (ver.major, ver.minor) == (1, 12)
+        and python_cap is None
+    )
+    if safe or compatible_foreign:
+        _drop_generated_openssl_bound(pkgs, ver)
+        return exe, ver
+
+    if STATE["override_executable"]:
+        raise Exception(
+            f"juliapkg_exe={exe} selects Julia {ver}, whose OpenSSL cannot be "
+            "used safely in this process. Use Julia 1.11 or earlier, use Python "
+            "with OpenSSL 3.5 or newer, or unset juliapkg_exe so juliapkg can "
+            "install and protect Julia."
+        )
+
+    if not owned and not STATE["offline"]:
+        exe, ver = find_julia(
+            compat=compat,
+            prefix=STATE["install"],
+            install=True,
+            upgrade=True,
+            system=False,
+        )
+        if (ver.major, ver.minor) < (1, 12):
+            return exe, ver
+        owned = _installed_by_juliapkg(exe)
+        if _shield_julia(exe, ver, owned=owned):
+            _drop_generated_openssl_bound(pkgs, ver)
+            return exe, ver
+
+    safe_julia = Compat.parse("1 - 1.11")
+    log(
+        f"WARNING: restricting Julia to {safe_julia}, because its OpenSSL cannot be "
+        "given a private name"
+    )
+    compat = safe_julia if compat is None else compat & safe_julia
+    return find_julia(
+        compat=compat,
+        prefix=STATE["install"],
+        install=True,
+        upgrade=True,
+    )
 
 
 def resolve(force=False, dry_run=False, update=False, julia_args=None):
@@ -531,6 +623,7 @@ def resolve(force=False, dry_run=False, update=False, julia_args=None):
         exe, ver = find_julia(
             compat=compat, prefix=STATE["install"], install=True, upgrade=True
         )
+        exe, ver = _reconcile_openssl(exe, ver, compat, pkgs)
         log(f"Using Julia {ver} at {exe}")
         # get libjulia path
         libjulia_script = [

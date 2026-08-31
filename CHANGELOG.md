@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+* Julia's bundled OpenSSL is given private library names after installation, and its
+  stdlib `OpenSSL_jll` is pointed at those names, so a libcrypto already loaded by CPython
+  can no longer be substituted for it. Python's OpenSSL version therefore no longer
+  restricts which Julia may be used, and the `<=python` bound on `OpenSSL_jll` is dropped
+  from Julia 1.12 on, where it is a stdlib and cannot be pinned by Pkg. Only installations
+  juliapkg created are renamed. Where the Julia that would collide was found on the system,
+  one is installed and renamed instead; where even that is not possible, the previous
+  restriction to Julia <1.12 still applies. Projects resolved by an earlier version resolve
+  once more, so that their installed Julia is renamed too.
+
 ## v0.1.26 (2026-08-14)
 * Add `julia_args` argument to `resolve()`.
 
