@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.27 (2026-09-19)
 * Add `bindir()` function.
 
 ## v0.1.26 (2026-08-14)
