@@ -538,7 +538,7 @@ def resolve(force=False, dry_run=False, update=False, julia_args=None):
         # get libjulia and bindir paths
         libjulia_script = [
             "using Libdl",
-            'print(abspath(Libdl.dlpath("libjulia")), \'\\0\', Sys.BINDIR)',
+            "print(abspath(Libdl.dlpath(\"libjulia\")), '\\0', Sys.BINDIR)",
         ]
         log_script(libjulia_script, "Finding libjulia and bindir:")
         libjulia, bindir = run_script(
