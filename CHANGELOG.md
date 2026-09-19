@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Add `bindir()` function.
+
 ## v0.1.26 (2026-08-14)
 * Add `julia_args` argument to `resolve()`.
 

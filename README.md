@@ -77,6 +77,7 @@ python -m juliapkg remove Example
 
 - `juliapkg.executable()` returns a compatible Julia executable.
 - `juliapkg.project()` returns the project into which the packages have been installed.
+- `juliapkg.bindir()` returns the Julia binary directory (`Sys.BINDIR`).
 - `juliapkg.libjulia()` returns the path to the libjulia library.
 - `juliapkg.resolve(force=False, dry_run=False, julia_args=None)` ensures all the dependencies are installed. You don't
   normally need to do this because the other functions resolve automatically.

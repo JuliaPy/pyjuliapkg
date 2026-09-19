@@ -27,8 +27,10 @@ logger = logging.getLogger("juliapkg")
 # 4 - changed from timestamp/sys_path to deps_files tracking
 # 5 - added hash_sha256 to deps_files for content verification
 # 6 - added libjulia path to meta
+# 7 - added package preferences
+# 8 - added Julia bindir to meta
 # increment whenever the format changes
-META_VERSION = 7
+META_VERSION = 8
 
 
 def load_meta():
@@ -520,6 +522,7 @@ def resolve(force=False, dry_run=False, update=False, julia_args=None):
                 STATE["executable"] = deps["executable"]
                 STATE["version"] = Version.parse(deps["version"])
                 STATE["libjulia"] = deps["libjulia"]
+                STATE["bindir"] = deps["bindir"]
                 STATE["resolved"] = True
                 return True
         if dry_run:
@@ -532,20 +535,20 @@ def resolve(force=False, dry_run=False, update=False, julia_args=None):
             compat=compat, prefix=STATE["install"], install=True, upgrade=True
         )
         log(f"Using Julia {ver} at {exe}")
-        # get libjulia path
+        # get libjulia and bindir paths
         libjulia_script = [
             "using Libdl",
-            'print(abspath(Libdl.dlpath("libjulia")))',
+            "print(abspath(Libdl.dlpath(\"libjulia\")), '\\0', Sys.BINDIR)",
         ]
-        log_script(libjulia_script, "Finding libjulia:")
-        libjulia = run_script(
+        log_script(libjulia_script, "Finding libjulia and bindir:")
+        libjulia, bindir = run_script(
             libjulia_script,
             executable=exe,
             project=project,
             julia_args=julia_args,
             capture_output=True,
             text=True,
-        ).stdout.strip()
+        ).stdout.split("\0")
         # set up the project
         shared = STATE["project_is_shared"]
         log(f"Using {'shared ' if shared else ''}Julia project at {project}")
@@ -634,6 +637,7 @@ def resolve(force=False, dry_run=False, update=False, julia_args=None):
                 "version": str(ver),
                 "executable": exe,
                 "libjulia": libjulia,
+                "bindir": bindir,
                 "deps_files": {
                     filename: {
                         "timestamp": os.path.getmtime(filename),
@@ -650,6 +654,7 @@ def resolve(force=False, dry_run=False, update=False, julia_args=None):
         STATE["executable"] = exe
         STATE["version"] = ver
         STATE["libjulia"] = libjulia
+        STATE["bindir"] = bindir
         return True
     finally:
         lock.release()
@@ -727,6 +732,16 @@ def libjulia():
     """
     resolve()
     return STATE["libjulia"]
+
+
+def bindir():
+    """
+    The Julia binary directory (``Sys.BINDIR``).
+
+    Dependencies are resolved first.
+    """
+    resolve()
+    return STATE["bindir"]
 
 
 def update(dry_run=False):
