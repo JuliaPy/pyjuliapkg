@@ -19,6 +19,7 @@ def test_import():
     juliapkg.add
     juliapkg.rm
     juliapkg.executable
+    juliapkg.bindir
     juliapkg.libjulia
     juliapkg.project
     juliapkg.offline
@@ -103,6 +104,13 @@ def test_libjulia():
     assert isinstance(lib, str)
     assert os.path.isfile(lib)
     assert os.path.basename(lib).lower().startswith("libjulia.")
+
+
+def test_bindir():
+    bindir = juliapkg.bindir()
+    assert isinstance(bindir, str)
+    assert os.path.isdir(bindir)
+    assert os.path.samefile(bindir, os.path.dirname(juliapkg.executable()))
 
 
 def test_project():

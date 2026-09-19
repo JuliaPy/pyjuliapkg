@@ -1,6 +1,7 @@
 from .deps import (
     PkgSpec,
     add,
+    bindir,
     executable,
     libjulia,
     offline,
@@ -16,6 +17,7 @@ __all__ = [
     "status",
     "resolve",
     "executable",
+    "bindir",
     "libjulia",
     "project",
     "PkgSpec",
