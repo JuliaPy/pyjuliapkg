@@ -110,7 +110,13 @@ def test_bindir():
     bindir = juliapkg.bindir()
     assert isinstance(bindir, str)
     assert os.path.isdir(bindir)
-    assert os.path.samefile(bindir, os.path.dirname(juliapkg.executable()))
+    actual = subprocess.run(
+        [juliapkg.executable(), "--startup-file=no", "-e", "print(Sys.BINDIR)"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert bindir == actual
 
 
 def test_project():
