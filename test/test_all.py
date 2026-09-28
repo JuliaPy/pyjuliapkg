@@ -188,3 +188,25 @@ def test_editable_setuptools():
     )
     assert os.path.exists(fn)
     assert any(os.path.samefile(fn, x) for x in juliapkg.deps.deps_files())
+
+
+def test_deps_files_skips_shadowed_package(monkeypatch):
+    # a package found twice on sys.path contributes only the copy import uses
+    with (
+        tempfile.TemporaryDirectory() as first,
+        tempfile.TemporaryDirectory() as second,
+    ):
+        for root in (first, second):
+            os.mkdir(os.path.join(root, "shadowedpkg"))
+            with open(os.path.join(root, "shadowedpkg", "juliapkg.json"), "w") as fp:
+                json.dump({"packages": {}}, fp)
+        monkeypatch.setattr("sys.path", [first, second])
+        files = juliapkg.deps.deps_files()
+        assert any(
+            os.path.samefile(os.path.join(first, "shadowedpkg", "juliapkg.json"), x)
+            for x in files
+        )
+        assert not any(
+            os.path.samefile(os.path.join(second, "shadowedpkg", "juliapkg.json"), x)
+            for x in files
+        )
