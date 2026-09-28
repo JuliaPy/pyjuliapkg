@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Read only the first `juliapkg.json` for each package found on `sys.path`, matching import.
+
 ## v0.1.27 (2026-09-19)
 * Add `bindir()` function.
 
