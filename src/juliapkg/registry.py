@@ -1,5 +1,6 @@
 import os
 import tarfile
+from tarfile import ReadError
 
 # we can switch to tomllib when we require python 3.11+
 import tomli
@@ -36,7 +37,7 @@ def _load_registry_index(reg):
     regpath = reg["path"]
     if not os.path.exists(regpath):
         raise ValueError(f"registry does not exist: {regpath}")
-    if regpath.endswith(".tar.gz"):
+    if regpath.endswith((".tar.gz", ".tar.zst")):
         with tarfile.open(regpath) as reg:
             regidx = tomli.load(reg.extractfile("Registry.toml"))
     elif os.path.isdir(regpath):
@@ -50,11 +51,18 @@ def _load_registry_index(reg):
 
 def _find_uuid(pkgname):
     uuids = {}
-    for reg in _find_registries():
+    found_registries = _find_registries()
+    for reg in found_registries:
         regpath = reg["path"]
         if not os.path.exists(regpath):
             continue
-        regidx = _load_registry_index(reg)
+        try:
+            regidx = _load_registry_index(reg)
+        except ReadError as e:
+            if reg == found_registries[-1]:
+                # if this is the last registry, we cannot continue, so raise the error
+                raise e
+            continue
         for uuid, info in regidx["packages"].items():
             if info["name"] != pkgname:
                 continue
