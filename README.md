@@ -145,3 +145,15 @@ will not attempt to download Julia or any packages.
 
 Resolving will fail if Julia is not already installed. It is up to you to install any
 required Julia packages.
+
+### Zstandard-compressed Julia registries
+
+On Python 3.11–3.13, looking up package UUIDs in `.tar.zst` Julia registries
+(for example, when calling `add()` without a UUID) requires the optional extra:
+
+```sh
+pip install "juliapkg[zstd]"
+```
+
+This extra installs the Zstandard backport only on Python below 3.14. Python 3.14
+and later support these registries through the standard library.

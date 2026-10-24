@@ -1,6 +1,6 @@
 import os
+import sys
 import tarfile
-from tarfile import ReadError
 
 # we can switch to tomllib when we require python 3.11+
 import tomli
@@ -38,7 +38,20 @@ def _load_registry_index(reg):
     if not os.path.exists(regpath):
         raise ValueError(f"registry does not exist: {regpath}")
     if regpath.endswith((".tar.gz", ".tar.zst")):
-        with tarfile.open(regpath) as reg:
+        registry_tarfile = tarfile
+        if regpath.endswith(".tar.zst") and sys.version_info < (3, 14):
+            try:
+                from backports.zstd import tarfile as registry_tarfile
+            except ModuleNotFoundError as exc:
+                if exc.name not in {"backports", "backports.zstd"}:
+                    raise
+                raise ImportError(
+                    "Reading .tar.zst Julia registries on Python <3.14 requires "
+                    "the optional Zstandard backport. Install it with "
+                    '`python -m pip install "juliapkg[zstd]"` '
+                    '(or `uv add "juliapkg[zstd]"`).'
+                ) from exc
+        with registry_tarfile.open(regpath) as reg:
             regidx = tomli.load(reg.extractfile("Registry.toml"))
     elif os.path.isdir(regpath):
         with open(os.path.join(regpath, "Registry.toml"), "rb") as fp:
@@ -51,18 +64,11 @@ def _load_registry_index(reg):
 
 def _find_uuid(pkgname):
     uuids = {}
-    found_registries = _find_registries()
-    for reg in found_registries:
+    for reg in _find_registries():
         regpath = reg["path"]
         if not os.path.exists(regpath):
             continue
-        try:
-            regidx = _load_registry_index(reg)
-        except ReadError as e:
-            if reg == found_registries[-1]:
-                # if this is the last registry, we cannot continue, so raise the error
-                raise e
-            continue
+        regidx = _load_registry_index(reg)
         for uuid, info in regidx["packages"].items():
             if info["name"] != pkgname:
                 continue
