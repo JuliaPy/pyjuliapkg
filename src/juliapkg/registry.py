@@ -1,4 +1,5 @@
 import os
+import sys
 import tarfile
 
 # we can switch to tomllib when we require python 3.11+
@@ -36,8 +37,21 @@ def _load_registry_index(reg):
     regpath = reg["path"]
     if not os.path.exists(regpath):
         raise ValueError(f"registry does not exist: {regpath}")
-    if regpath.endswith(".tar.gz"):
-        with tarfile.open(regpath) as reg:
+    if regpath.endswith((".tar.gz", ".tar.zst")):
+        registry_tarfile = tarfile
+        if regpath.endswith(".tar.zst") and sys.version_info < (3, 14):
+            try:
+                from backports.zstd import tarfile as registry_tarfile
+            except ModuleNotFoundError as exc:
+                if exc.name not in {"backports", "backports.zstd"}:
+                    raise
+                raise ImportError(
+                    "Reading .tar.zst Julia registries on Python <3.14 requires "
+                    "the optional Zstandard backport. Install it with "
+                    '`python -m pip install "juliapkg[zstd]"` '
+                    '(or `uv add "juliapkg[zstd]"`).'
+                ) from exc
+        with registry_tarfile.open(regpath) as reg:
             regidx = tomli.load(reg.extractfile("Registry.toml"))
     elif os.path.isdir(regpath):
         with open(os.path.join(regpath, "Registry.toml"), "rb") as fp:
