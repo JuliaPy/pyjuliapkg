@@ -300,7 +300,8 @@ def deps_files():
     ans = []
     # the default deps file
     ans.append(cur_deps_file())
-    # look in sys.path
+    # look in sys.path, keeping only the first copy of each package, as import does
+    seen = set()
     for path in sys.path:
         if not path:
             path = os.getcwd()
@@ -310,7 +311,9 @@ def deps_files():
         ans.append(fn)
         for subdir in os.listdir(path):
             fn = os.path.join(path, subdir, "juliapkg.json")
-            ans.append(fn)
+            if subdir not in seen and os.path.isfile(fn):
+                seen.add(subdir)
+                ans.append(fn)
 
     ans += editable_deps_files()
 
