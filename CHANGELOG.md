@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.28 (2026-10-24)
 * Support `.tar.zst` Julia registries. On Python 3.11–3.13, install
   `juliapkg[zstd]` to enable this support; Python 3.14+ supports it natively.
 * Read only the first `juliapkg.json` for each package found on `sys.path`, matching import.
